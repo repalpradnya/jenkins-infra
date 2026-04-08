@@ -23,6 +23,8 @@ pipeline {
         booleanParam(defaultValue: false, name: 'InstallLSO', description: 'Install Local Storage Operator')
         string(defaultValue: '', description: 'Enter index image for installing INFO', name: 'IndexImageINFO')
         string(defaultValue: '', description: 'Enter index image for installing LSO', name: 'IndexImageLSO')
+        booleanParam(defaultValue: false, name: 'InstallCOO', description: 'Install Cluster Observability Operator')
+        string(defaultValue: '', description: 'Enter Catalog Source image for installing COO', name: 'CatalogImageCOO')
         string(defaultValue: '', description: 'Enter index image if you want to run the CO e2e', name: 'IndexImageCo')
         string(defaultValue: '', description: 'Enter index image if you want to run the FIO e2e', name: 'IndexImagefio')
         string(defaultValue: '', description: 'Enter index image if you want to run the Metallb e2e', name: 'IndexImageMetallb')
@@ -68,13 +70,13 @@ pipeline {
         //FIO Operator e2e
         ENABLE_FIO_E2E_TEST = "${params.RunFioE2e}"
         FIO_CATALOGSOURCE_IMAGE = "${params.IndexImagefio}"
+        //COO Operator e2e 
+        ENABLE_COO_INSTALL = "${params.InstallCOO}"
+        COO_CATALOGSOURCE_IMAGE = "${params.CatalogImageCOO}"
         //Ip address for metallb Operators E2E
         L2_ADDRESS1="10.20.182.101"
         L2_ADDRESS2="10.20.182.102"
         BGB_ADDRESS1="10.20.182.103"
-        //LSO 
-        ENABLE_LSO_INSTALL = "${params.InstallLSO}"
-        LSO_CATALOGSOURCE_IMAGE = "${params.IndexImageLSO}"
 
         //Parameters
         REDHAT_RELEASE="${params.RedHatRelease}"
@@ -89,7 +91,7 @@ pipeline {
     stages {
         stage('Clone ansible extra') {
             steps {
-                cloneRepo("https://github.com/ocp-power-automation/ocp4-playbooks-extras", "ocp4-playbooks-extras", "*/main")
+                cloneRepo("https://github.com/Jeevaann/ocp4-playbooks-extras.git", "ocp4-playbooks-extras", "*/coo")
             }
         }
         stage('Setup Common Environment Variables') {
@@ -98,6 +100,7 @@ pipeline {
                 setupClusterConfig("${CONFIG_TYPE}")
                 script {
                     env.BASTION_MEMORY = "16"
+                    
                     // Added a condition for RHCOS_RELEASE to be set to 4.19 for OCP 4.20/4.21/4.22
                     if (env.OCP_RELEASE == "4.20" || env.OCP_RELEASE == "4.21" || env.OCP_RELEASE == "4.22"){
                         env.RHCOS_RELEASE = "4.19"
@@ -307,9 +310,10 @@ pipeline {
                             }
                         }
                     }
-                }
-                stage('Install LSO') {
-                    when { expression { return env.ENABLE_LSO_INSTALL == "true"; } }
+                }  
+                
+                stage('Install COO') {
+                    when { expression { return env.ENABLE_COO_INSTALL == "true"; } }
                     steps {
                         script {
                             ansiColor('xterm') {
@@ -317,11 +321,11 @@ pipeline {
                             }
                             try {
                                 sh '''
-                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/lso_operator.sh && ./scripts/operator/lso_operator.sh
+                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/coo_operator.sh && ./scripts/operator/coo_operator.sh
                                 '''
                             }
                             catch(err) {
-                                echo 'LSO operator installation failed!'
+                                echo 'COO operator installation failed!'
                                 failedStages.add(env.STAGE_NAME)
                                 throw err
                             }
