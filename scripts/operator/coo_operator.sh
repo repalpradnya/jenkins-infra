@@ -28,7 +28,7 @@ sed -i \
 -e "s|coo_catalogsource_image:.*$|coo_catalogsource_image: \"${COO_CATALOGSOURCE_IMAGE}\"|" \
 coo_vars.yaml
 
-#sed -i '/Include the global pull-secret update role/,/name: global-secret-update/ s/^/#/' playbooks/roles/ocp-coo/tasks/install.yaml
+sed -i '/Include the global pull-secret update role/,/name: global-secret-update/ s/^/#/' playbooks/roles/ocp-coo/tasks/install.yaml
 
 cat coo_vars.yaml
 
