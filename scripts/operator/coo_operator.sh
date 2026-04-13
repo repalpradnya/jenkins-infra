@@ -7,7 +7,8 @@ cd ${WORKSPACE}/ocp4-playbooks-extras
 
 #added lokicred-secret  
 
-#oc get ns openshift-logging >/dev/null 2>&1 || oc create ns openshift-logging
+#oc get ns openshift-logging >/dev/null 2>&1 || oc create ns openshift-logging 
+oc -n openshift-logging create secret generic lokicred-secret --from-literal=endpoint=https://s3.jp-tok.cloud-object-storage.appdomain.cloud --from-literal=region=jp-tok --from-literal=bucketnames=cos-standard-upi-validation --from-literal=access_key_id=${COS_STANDARD_KEY} --from-literal=access_key_secret=${COS_STANDARD_SECRET}
 
 FILE_PATH="./playbooks/roles/ocp-cluster-logging/files/validate-urls.yml"
 
