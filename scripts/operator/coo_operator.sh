@@ -45,6 +45,8 @@ cd playbooks/roles/ocp-coo/tasks
 sed -i '/- name: Run ImageDigestMirrorSet/a\          delegate_to: localhost' install.yaml
 sed -i '/- name: Create CatalogSource/a\          delegate_to: localhost' install.yaml
 sed -i '/- name: Run CatalogSource/a\          delegate_to: localhost' install.yaml
+cat install.yaml
+
 cd ../../../..
 
 # Install dependency
