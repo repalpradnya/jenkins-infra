@@ -91,7 +91,7 @@ pipeline {
     stages {
         stage('Clone ansible extra') {
             steps {
-                cloneRepo("https://github.com/Jeevaann/ocp4-playbooks-extras.git", "ocp4-playbooks-extras", "*/coo")
+                cloneRepo("https://github.com/repalpradnya/ocp4-playbooks-extras.git", "ocp4-playbooks-extras", "*/cicoo")
             }
         }
         stage('Setup Common Environment Variables') {
