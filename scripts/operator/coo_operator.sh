@@ -20,13 +20,11 @@ oc -n openshift-logging create secret generic lokicred-secret --from-literal=end
 cp examples/ocp_coo_vars.yaml coo_vars.yaml
 
 sed -i \
--e "s|enable_logging_uiplugin:.*$|enable_logging_uiplugin: false|g" \
--e "s|enable_distributed_tracing_uiplugin:.*$|enable_distributed_tracing_uiplugin: false|g" \
--e "s|enable_troubleshootingpanel_uiplugin:.*$|enable_troubleshootingpanel_uiplugin: false|g" \
--e "s|enable_monitoring_uiplugin:.*$|enable_monitoring_uiplugin: false|g" \
--e "s|enable_perses_dashboard:.*$|enable_perses_dashboard: false|g" \
--e "s|ocp_cluster_logging:.*$|ocp_cluster_logging: false|g" \
--e "s|cluster_log_forwarder:.*$|cluster_log_forwarder: false|g" \
+-e "s|enable_logging_uiplugin:.*$|enable_logging_uiplugin: true|g" \
+-e "s|enable_distributed_tracing_uiplugin:.*$|enable_distributed_tracing_uiplugin: true|g" \
+-e "s|enable_troubleshootingpanel_uiplugin:.*$|enable_troubleshootingpanel_uiplugin: true|g" \
+-e "s|enable_monitoring_uiplugin:.*$|enable_monitoring_uiplugin: true|g" \
+-e "s|enable_perses_dashboard:.*$|enable_perses_dashboard: true|g" \
 -e "s|coo_catalogsource_image:.*$|coo_catalogsource_image: \"${COO_CATALOGSOURCE_IMAGE}\"|" \
 -e "s|coo_enable_global_secret :.*$|coo_enable_global_secret: false|g" \
 coo_vars.yaml
