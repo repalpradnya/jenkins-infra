@@ -48,6 +48,20 @@ cat install.yaml
 
 cd ../../../..
 
+
+ssh -i id_rsa root@<bastion_ip> <<EOF
+export KUBECONFIG=/root/auth/kubeconfig
+
+echo "Checking cluster access..."
+oc whoami || exit 1
+
+echo "Removing taints..."
+oc adm taint nodes --all node-role.kubernetes.io/master- || true
+oc adm taint nodes --all node-role.kubernetes.io/control-plane- || true
+
+echo "Current nodes:"
+oc get nodes -o wide
+EOF
 # Install dependency
 python3 -m pip install --break-system-packages kubernetes openshift
 python3 -c "import kubernetes; print('OK')"
