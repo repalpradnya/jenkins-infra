@@ -27,6 +27,8 @@ sed -i "s|ssh|ssh ansible_ssh_private_key_file=${WORKSPACE}/deploy/id_rsa|g" coo
 cat coo-inventory
 
 ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<EOF
+oc get ns openshift-logging >/dev/null 2>&1 || oc create ns openshift-logging
+
 oc create secret generic lokicred-secret \
   --from-literal=endpoint=https://s3.jp-tok.cloud-object-storage.appdomain.cloud \
   --from-literal=region=jp-tok \
