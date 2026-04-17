@@ -50,7 +50,10 @@ cd ../../../..
 
 
 ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<'EOF'
-export KUBECONFIG=/root/auth/kubeconfig
+export KUBECONFIG=/root/openshift/auth/kubeconfig
+
+echo "Checking kubeconfig..."
+ls -l $KUBECONFIG
 
 echo "Checking cluster access..."
 oc whoami || exit 1
@@ -71,3 +74,28 @@ python3 -c "import kubernetes; print('OK')"
 ansible-galaxy collection install kubernetes.core
 ansible-playbook  -i coo-inventory -e @coo_vars.yaml playbooks/ocp-coo.yml -vvv
 
+ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<'EOF'
+export KUBECONFIG=/root/openshift/auth/kubeconfig
+
+echo "==== Pods (openshift-logging) ===="
+oc get pods -n openshift-logging
+
+echo "==== Pods NOT running ===="
+oc get pods -n openshift-logging --no-headers | grep -v "Running\|Completed" || echo "All pods healthy"
+
+echo "==== Deployments ===="
+oc get deployments -n openshift-logging
+
+echo "==== Describe one pod (for debugging) ===="
+POD_NAME=$(oc get pods -n openshift-logging -o jsonpath='{.items[0].metadata.name}')
+
+if [ -n "$POD_NAME" ]; then
+  echo "Describing pod: $POD_NAME"
+  oc describe pod $POD_NAME -n openshift-logging
+else
+  echo "No pods found in openshift-logging"
+fi
+
+echo "==== Recent Events ===="
+oc get events -n openshift-logging | tail -20
+EOF
