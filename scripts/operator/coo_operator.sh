@@ -5,8 +5,21 @@ rm -rf ~/.ansible
 ansible all -m setup -a 'gather_subset=!all'
 cd ${WORKSPACE}/ocp4-playbooks-extras 
 
-cp examples/ocp_coo_vars.yaml coo_vars.yaml
 
+cd playbooks/roles/ocp-cluster-logging/files/
+grep -q "Wait for Loki deployments" clusterlogging.yml || \
+sed -i '/register: check_lokistack/a\
+\
+- name: Wait for Loki deployments\
+  shell: oc get deployment -n openshift-logging | grep lokistack | wc -l\
+  register: loki_deploy\
+  until: loki_deploy.stdout | int >= 4\
+  retries: 20\
+  delay: 30\
+' clusterlogging.yml
+cd ../../../..
+
+cp examples/ocp_coo_vars.yaml coo_vars.yaml
 sed -i \
 -e "s|enable_logging_uiplugin:.*$|enable_logging_uiplugin: true|g" \
 -e "s|enable_distributed_tracing_uiplugin:.*$|enable_distributed_tracing_uiplugin: true|g" \
