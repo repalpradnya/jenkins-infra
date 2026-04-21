@@ -18,6 +18,7 @@ sed -i '/when: clo_version | float >= 6.0/a\
   delay: 30\
   when: clo_version | float >= 5.9\
 ' clusterlogging.yml
+cat clusterlogging.yml
 cd ../../../..
 
 cp examples/ocp_coo_vars.yaml coo_vars.yaml
