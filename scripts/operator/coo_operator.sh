@@ -8,7 +8,7 @@ cd ${WORKSPACE}/ocp4-playbooks-extras
 
 cd playbooks/roles/ocp-cluster-logging/files/
 grep -q "Wait for Loki deployments" clusterlogging.yml || \
-sed -i '/register: check_lokistack/a\
+sed -i '/when: clo_version | float >= 6.0/a\
 \
 - name: Wait for Loki deployments\
   shell: oc get deployment -n openshift-logging | grep lokistack | wc -l\
@@ -16,6 +16,7 @@ sed -i '/register: check_lokistack/a\
   until: loki_deploy.stdout | int >= 4\
   retries: 20\
   delay: 30\
+  when: clo_version | float >= 5.9\
 ' clusterlogging.yml
 cd ../../../..
 
