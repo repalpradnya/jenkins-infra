@@ -89,27 +89,32 @@ python3 -c "import kubernetes; print('OK')"
 ansible-galaxy collection install kubernetes.core
 ansible-playbook  -i coo-inventory -e @coo_vars.yaml playbooks/ocp-coo.yml -vvv
 
-# ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<'EOF'
+ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<'EOF'
 
-# echo "==== Pods (openshift-logging) ===="
-# oc get pods -n openshift-logging
+echo "================ DEBUG START ================"
 
-# echo "==== Pods NOT running ===="
-# oc get pods -n openshift-logging --no-headers | grep -v "Running\|Completed" || echo "All pods healthy"
+echo "==== LokiStack YAML ===="
+oc get lokistack -n openshift-logging -o yaml || true
 
-# echo "==== Deployments ===="
-# oc get deployments -n openshift-logging
+echo "==== LokiStack Describe ===="
+oc describe lokistack -n openshift-logging || true
 
-# echo "==== Describe one pod (for debugging) ===="
-# POD_NAME=$(oc get pods -n openshift-logging -o jsonpath='{.items[0].metadata.name}')
+echo "==== Pods ===="
+oc get pods -n openshift-logging -o wide || true
 
-# if [ -n "$POD_NAME" ]; then
-#   echo "Describing pod: $POD_NAME"
-#   oc describe pod $POD_NAME -n openshift-logging
-# else
-#   echo "No pods found in openshift-logging"
-# fi
+echo "==== Deployments ===="
+oc get deployment -n openshift-logging || true
 
-# echo "==== Recent Events ===="
-# oc get events -n openshift-logging | tail -20
-# EOF
+echo "==== Events ===="
+oc get events -n openshift-logging --sort-by=.metadata.creationTimestamp | tail -50 || true
+
+echo "==== Operator Logs ===="
+oc logs deployment/cluster-logging-operator -n openshift-logging || true
+
+echo "================ DEBUG END ================"
+
+EOF
+
+
+echo "Cluster will be kept alive for debugging..."
+sleep 3600   # 1 hour
