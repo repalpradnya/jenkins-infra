@@ -9,7 +9,7 @@ cd ${WORKSPACE}/ocp4-playbooks-extras
 cd playbooks/roles/ocp-cluster-logging/files/
 sed -i '/Deploy app centos-logtest that generates structured data/a\  delegate_to: localhost' loggingstack.yml
 sed -i '/Wait for centos-logtest- pods to come up/a\  delegate_to: localhost' loggingstack.yml
-sed -i '/Deployment of acmeair-mainservice-java pods/a\  delegate_to: localhost' loggingstack.yml
+# sed -i '/Deployment of acmeair-mainservice-java pods/a\  delegate_to: localhost' loggingstack.yml
 # grep -q "Wait for Loki deployments" clusterlogging.yml || \
 # sed -i '/when: clo_version | float >= 6.0/a\
 # \
