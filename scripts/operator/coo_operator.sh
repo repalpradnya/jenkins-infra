@@ -22,6 +22,7 @@ sed -i '/Deployment of acmeair-mainservice-java pods/a\  delegate_to: localhost'
 #   when: clo_version | float >= 5.9\
 # ' clusterlogging.yml
 # cat clusterlogging.yml
+cat loggingstack.yml
 cd ../../../..
 
 cp examples/ocp_coo_vars.yaml coo_vars.yaml
