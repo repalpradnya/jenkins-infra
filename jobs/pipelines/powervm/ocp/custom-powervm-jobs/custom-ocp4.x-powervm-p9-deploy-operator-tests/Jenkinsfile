@@ -30,6 +30,7 @@ pipeline {
         string(defaultValue: '', description: 'Enter index image if you want to run the Metallb e2e', name: 'IndexImageMetallb')
     } 
     environment {
+   
         //users and credentials. All must be defined in Jenkins Credentials
         GITHUB_USER = credentials('PUBLIC_GITHUB_USER') 
         GITHUB_TOKEN = credentials('PUBLIC_GITHUB_TOKEN')
@@ -73,6 +74,8 @@ pipeline {
         //COO Operator e2e 
         ENABLE_COO_INSTALL = "${params.InstallCOO}"
         COO_CATALOGSOURCE_IMAGE = "${params.CatalogImageCOO}"
+        COS_STANDARD_KEY= credentials('COS_STANDARD_KEY')
+        COS_STANDARD_SECRET= credentials('COS_STANDARD_SECRET')
         //Ip address for metallb Operators E2E
         L2_ADDRESS1="10.20.182.101"
         L2_ADDRESS2="10.20.182.102"
