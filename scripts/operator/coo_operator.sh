@@ -7,18 +7,21 @@ cd ${WORKSPACE}/ocp4-playbooks-extras
 
 
 cd playbooks/roles/ocp-cluster-logging/files/
-grep -q "Wait for Loki deployments" clusterlogging.yml || \
-sed -i '/when: clo_version | float >= 6.0/a\
-\
-- name: Wait for Loki deployments\
-  shell: oc get deployment -n openshift-logging | grep lokistack | wc -l\
-  register: loki_deploy\
-  until: loki_deploy.stdout | int >= 4\
-  retries: 20\
-  delay: 30\
-  when: clo_version | float >= 5.9\
-' clusterlogging.yml
-cat clusterlogging.yml
+sed -i '/Deploy app centos-logtest that generates structured data/a\  delegate_to: localhost' loggingstack.yml
+sed -i '/Wait for centos-logtest- pods to come up/a\  delegate_to: localhost' loggingstack.yml
+sed -i '/Deployment of acmeair-mainservice-java pods/a\  delegate_to: localhost' loggingstack.yml
+# grep -q "Wait for Loki deployments" clusterlogging.yml || \
+# sed -i '/when: clo_version | float >= 6.0/a\
+# \
+# - name: Wait for Loki deployments\
+#   shell: oc get deployment -n openshift-logging | grep lokistack | wc -l\
+#   register: loki_deploy\
+#   until: loki_deploy.stdout | int >= 4\
+#   retries: 20\
+#   delay: 30\
+#   when: clo_version | float >= 5.9\
+# ' clusterlogging.yml
+# cat clusterlogging.yml
 cd ../../../..
 
 cp examples/ocp_coo_vars.yaml coo_vars.yaml
