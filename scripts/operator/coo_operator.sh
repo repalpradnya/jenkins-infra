@@ -10,6 +10,7 @@ cd playbooks/roles/ocp-cluster-logging/files/
 sed -i '/Deploy app centos-logtest that generates structured data/a\  delegate_to: localhost' loggingstack.yml
 sed -i '/Wait for centos-logtest- pods to come up/a\  delegate_to: localhost' loggingstack.yml
 sed -i '/kubectl wait --all  --namespace=acme-air --for=condition=Ready pods --timeout=300s/a\
+  ignore_errors: yes\
 \
 - name: Check for problematic pods\
   shell: |\
