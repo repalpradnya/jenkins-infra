@@ -9,6 +9,29 @@ cd ${WORKSPACE}/ocp4-playbooks-extras
 cd playbooks/roles/ocp-cluster-logging/files/
 sed -i '/Deploy app centos-logtest that generates structured data/a\  delegate_to: localhost' loggingstack.yml
 sed -i '/Wait for centos-logtest- pods to come up/a\  delegate_to: localhost' loggingstack.yml
+sed -i '/kubectl wait --all  --namespace=acme-air --for=condition=Ready pods --timeout=300s/a\
+\
+- name: Check for problematic pods\
+  shell: |\
+    oc get pods -n acme-air --no-headers | egrep '\''Error|CrashLoopBackOff|ImagePullBackOff|ErrImagePull'\'' | wc -l\
+  register: pod_issue_count\
+\
+- name: Fix MongoDB image (only if real failure)\
+  shell: |\
+    for d in acmeair-flight-db acmeair-booking-db acmeair-customer-db; do\
+      oc patch deployment $d -n acme-air --type='\''json'\'' -p='\''[{"op":"replace","path":"/spec/template/spec/containers/0/image","value":"docker.io/ibmcom/icp-mongodb-ppc64le:4.0.12"}]'\'';\
+    done\
+    oc rollout restart deployment acmeair-flight-db acmeair-booking-db acmeair-customer-db -n acme-air\
+  when: pod_issue_count.stdout | int > 0\
+\
+- name: Wait for acme-air pods to be ready\
+  shell: oc get pods -n acme-air --no-headers | grep -v Running | grep -v Completed | wc -l\
+  register: pod_status\
+  until: pod_status.stdout | int == 0\
+  retries: 20\
+  delay: 30\
+' loggingstack.yml 
+
 # sed -i '/Deployment of acmeair-mainservice-java pods/a\  delegate_to: localhost' loggingstack.yml
 # grep -q "Wait for Loki deployments" clusterlogging.yml || \
 # sed -i '/when: clo_version | float >= 6.0/a\
