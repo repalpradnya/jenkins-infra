@@ -93,32 +93,34 @@ python3 -c "import kubernetes; print('OK')"
 ansible-galaxy collection install kubernetes.core
 ansible-playbook  -i coo-inventory -e @coo_vars.yaml playbooks/ocp-coo.yml -vvv
 
-# ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<'EOF'
+ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<'EOF'
+oc get pods -n acme-air 
+oc get all -n acme-air
 
-# echo "================ DEBUG START ================"
+echo "================ DEBUG START ================"
 
-# echo "==== LokiStack YAML ===="
-# oc get lokistack -n openshift-logging -o yaml || true
+echo "==== LokiStack YAML ===="
+oc get lokistack -n openshift-logging -o yaml || true
 
-# echo "==== LokiStack Describe ===="
-# oc describe lokistack -n openshift-logging || true
+echo "==== LokiStack Describe ===="
+oc describe lokistack -n openshift-logging || true
 
-# echo "==== Pods ===="
-# oc get pods -n openshift-logging -o wide || true
+echo "==== Pods ===="
+oc get pods -n openshift-logging -o wide || true
 
-# echo "==== Deployments ===="
-# oc get deployment -n openshift-logging || true
+echo "==== Deployments ===="
+oc get deployment -n openshift-logging || true
 
-# echo "==== Events ===="
-# oc get events -n openshift-logging --sort-by=.metadata.creationTimestamp | tail -50 || true
+echo "==== Events ===="
+oc get events -n openshift-logging --sort-by=.metadata.creationTimestamp | tail -50 || true
 
-# echo "==== Operator Logs ===="
-# oc logs deployment/cluster-logging-operator -n openshift-logging || true
+echo "==== Operator Logs ===="
+oc logs deployment/cluster-logging-operator -n openshift-logging || true
 
-# echo "================ DEBUG END ================"
+echo "================ DEBUG END ================"
 
-# EOF
+EOF
 
 
-# echo "Cluster will be kept alive for debugging..."
-# sleep 3600   # 1 hour
+echo "Cluster will be kept alive for debugging..."
+sleep 3600   # 1 hour
