@@ -13,7 +13,7 @@ sed -i '/kubectl wait --all  --namespace=acme-air --for=condition=Ready pods --t
 \
 - name: Check for problematic pods\
   shell: |\
-    oc get pods -n acme-air --no-headers | egrep '\''Error|CrashLoopBackOff|ImagePullBackOff|ErrImagePull'\'' | wc -l\
+    oc get pods -n acme-air --no-headers | grep -v Running | grep -v Completed | wc -l\
   register: pod_issue_count\
 \
 - name: Fix MongoDB image (only if real failure)\
@@ -31,7 +31,6 @@ sed -i '/kubectl wait --all  --namespace=acme-air --for=condition=Ready pods --t
   retries: 20\
   delay: 30\
 ' loggingstack.yml 
-
 # sed -i '/Deployment of acmeair-mainservice-java pods/a\  delegate_to: localhost' loggingstack.yml
 # grep -q "Wait for Loki deployments" clusterlogging.yml || \
 # sed -i '/when: clo_version | float >= 6.0/a\
