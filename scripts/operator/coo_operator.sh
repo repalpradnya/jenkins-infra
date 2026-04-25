@@ -90,25 +90,6 @@ cat install.yaml
 
 cd ../../../..
 
-
-# ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} <<'EOF'
-# export KUBECONFIG=openstack-upi/auth/kubeconfig 
-
-# echo "Checking kubeconfig..."
-# ls -l $KUBECONFIG
-
-# echo "Checking cluster access..."
-# oc whoami || exit 1
-
-# echo "Removing taints..."
-# oc adm taint nodes --all node-role.kubernetes.io/master- || true
-# oc adm taint nodes --all node-role.kubernetes.io/control-plane- || true
-
-# echo "Current nodes:"
-# oc get nodes -o wide
-# EOF
-
-
 # Install dependency
 python3 -m pip install --break-system-packages kubernetes openshift
 python3 -c "import kubernetes; print('OK')"
@@ -143,7 +124,3 @@ oc logs deployment/cluster-logging-operator -n openshift-logging || true
 echo "================ DEBUG END ================"
 
 EOF
-
-
-echo "Cluster will be kept alive for debugging..."
-sleep 3600   # 1 hour
