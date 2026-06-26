@@ -1,33 +1,26 @@
 @Library('jenkins-upstream-library') _
-def failedStages = []
+
 pipeline {
     agent {
         docker {
-            image 'quay.io/powercloud/inbound-agent:3256.v88a_f6e922152-2-jdk17.1'
+            image 'quay.io/rh_ee_ahonkala/console-e2e-ci:v22.06.26'
             args '-v /etc/resolv.conf:/etc/resolv.conf -v /run/containerd/containerd.sock:/run/containerd/containerd.sock'
             label 'jump-vpc-x86_64'
         }
     }
+    options { disableConcurrentBuilds() }
     parameters {
         string(defaultValue: '', description: 'Build(quay image or build number)', name: 'Build')
-        string(defaultValue: '30', description: 'Enter time(in Minutes) to retain the cluster', name: 'KeepFor')
-        string(defaultValue: '1.22.4', description: 'Enter the Go Language Version', name: 'GoLangVersion')
-        choice(description: 'Select the OpenShift Release', choices: ['4.22','4.21','4.20','4.19','4.18','4.17','4.16','4.15','4.14','4.13','4.12'], name: 'Release')
-        choice(description: 'Select the RedHat Release Version', choices: ['9.7','9.6','8.10'], name: 'RedHatRelease')
-        choice(description: 'Select the Configuration', choices: ['min','max','odf'], name: 'Config')
-        booleanParam(defaultValue: false, name: 'RunCroE2e', description: 'Select if you want to run CRO e2e tests. E2e runs after cluster Deployed')
-        booleanParam(defaultValue: false, name: 'RunMetallbE2e', description: 'Select if you want to run Metallb e2e tests. E2e runs after cluster Deployed')
-        booleanParam(defaultValue: false, name: 'RunCoE2e', description: 'Select if you want to run Compliance operator e2e tests. E2e runs after cluster Deployed')
-        booleanParam(defaultValue: false, name: 'RunFioE2e', description: 'Select if you want to run Fio operator e2e tests. E2e runs after cluster Deployed')
-        booleanParam(defaultValue: false, name: 'InstallLSO', description: 'Install Local Storage Operator')
-        string(defaultValue: '', description: 'Enter index image for installing LSO', name: 'IndexImageLSO')
-        string(defaultValue: '', description: 'Enter index image if you want to run the CO e2e', name: 'IndexImageCo')
-        string(defaultValue: '', description: 'Enter index image if you want to run the FIO e2e', name: 'IndexImagefio')
-    } 
+        string(defaultValue: '', description: 'Build Release', name: 'Release')
+        string(defaultValue: '720', description: 'Enter time(in Minutes) to retain the cluster', name: 'KeepFor')
+        string(name: 'Suite', defaultValue: 'e2e', description: 'Enter a suite path as tests/dir/suite.cy.ts')
+        string(name: 'Retries', defaultValue: '2', description: 'Enter number of retries')
+    }
+
     environment {
         //users and credentials. All must be defined in Jenkins Credentials
-        GITHUB_USER = credentials('PUBLIC_GITHUB_USER') 
-        GITHUB_TOKEN = credentials('PUBLIC_GITHUB_TOKEN')
+        GITHUB_USER = credentials('GITHUB_USER')
+        GITHUB_TOKEN = credentials('GITHUB_TOKEN')
         OS_USERNAME = credentials('OS_USERNAME')
         OS_PASSWORD = credentials('OS_PASSWORD')
         ARTIFACTORY_USER = credentials('ARTIFACTORY_USER')
@@ -36,49 +29,39 @@ pipeline {
         REDHAT_PASSWORD = credentials('REDHAT_PASSWORD')
         PULL_SECRET = credentials('PULL_SECRET')
 
-        //Env constants
-        HARDWARE_CHOSE = "P9"
-        TERRAFORM_VER = "1.9.2"
-        TARGET = "deploy-openshift4-powervc"
-        TEMPLATE_FILE = ".${TARGET}.tfvars.template"
-        POWERVS = false
-        SCRIPT_DEPLOYMENT = false
-        WAIT_FOR_DEBUG = "1"
+        //IBM Cloud API key is used for uploading must-gather logs to IBM COS
+        IBMCLOUD_API_KEY = credentials('IBM_PCLOUD_QE_API_KEY')
 
+        //Parameters
+        OCP_RELEASE="${params.Release}"
+        CONFIG_TYPE="min"
+        BUILD="${params.Build}"
+        TIMEOUT = "${params.KeepFor}"
+        ENABLE_E2E_TEST= false
+        
         //Branch
         OPENSHIFT_POWERVC_GIT_TF_DEPLOY_BRANCH="main"//The download branch
 
-        //E2e specific variables
-        GOLANG_VERSION="${params.GoLangVersion}"
-        GOLANG_TARBALL="https://go.dev/dl/go${GOLANG_VERSION}.linux-ppc64le.tar.gz"
-        //ClusterResourceOverride operator E2e
-        ENABLE_CRO_E2E_TEST = "${params.RunCroE2e}"
-        //Metallb operator E2e
-        ENABLE_METALLB_E2E_TEST = "${params.RunMetallbE2e}"
-        //Compliance Operator e2e
-        ENABLE_CO_E2E_TEST = "${params.RunCoE2e}"
-        COMPLIANCE_CATALOGSOURCE_IMAGE = "${params.IndexImageCo}"
-        //FIO Operator e2e
-        ENABLE_FIO_E2E_TEST = "${params.RunFioE2e}"
-        FIO_CATALOGSOURCE_IMAGE = "${params.IndexImagefio}"
-        //Ip address for metallb Operators E2E
-        L2_ADDRESS1="10.20.182.101"
-        L2_ADDRESS2="10.20.182.102"
-        BGB_ADDRESS1="10.20.182.103"
-        //LSO 
-        ENABLE_LSO_INSTALL = "${params.InstallLSO}"
-        LSO_CATALOGSOURCE_IMAGE = "${params.IndexImageLSO}"
-
-        //Parameters
-        REDHAT_RELEASE="${params.RedHatRelease}"
-        OCP_RELEASE="${params.Release}"
-        CONFIG_TYPE="${params.Config}"
-        BUILD="${params.Build}"
-        TIMEOUT = "${params.KeepFor}"
-
+        //Env constants
+        HARDWARE_CHOSE = "P9"
+        TARGET = "deploy-openshift4-powervc"
+        TEMPLATE_FILE = ".${TARGET}.tfvars.template"
+        TERRAFORM_VER = "1.9.6"
+        POWERVS = false
+        SCRIPT_DEPLOYMENT = false
+        WAIT_FOR_DEBUG = "0"
+        ENABLE_SCALE_TEST="false"
         // kdump Configuration
-        KDUMP_ENABLE="false"
+        KDUMP_ENABLE="false" 
+
+        //Console UI e2e input vars
+        ENABLE_CONSOLE_E2E_TEST="true"
+        DRIVER="Cypress"
+        SUITE2RUN="${params.Suite}"
+        RETRIES="${params.Retries}"
+        JTIMEOUT=180000
     }
+
     stages {
         stage('Clone ansible extra') {
             steps {
@@ -90,21 +73,60 @@ pipeline {
                 setupCommonEnvironmentVariables()
                 setupClusterConfig("${CONFIG_TYPE}")
                 script {
-                    env.BASTION_MEMORY = "16"
-                    // Added a condition for RHCOS_RELEASE to be set to 4.19 for OCP 4.20/4.21/4.22
-                    if (env.OCP_RELEASE == "4.20" || env.OCP_RELEASE == "4.21" || env.OCP_RELEASE == "4.22"){
-                        env.RHCOS_RELEASE = "4.19"
+                    env.INSTANCE_NAME = "rdr-zstream-p9"
+                    env.BASTION_VCPUS = "1"
+                    env.BOOTSTRAP_VCPUS = "1"
+                    env.BOOTSTRAP_MEMORY = "8"
+                    env.MOUNT_ETCD_RAMDISK = "false"
+                    env.SETUP_SQUID_PROXY = "true"
+
+                    if (env.OCP_RELEASE == "4.12") {
+                        env.REDHAT_RELEASE = "9.2"
+                        env.GOLANG_TARBALL = "https://golang.org/dl/go1.18.6.linux-ppc64le.tar.gz"
+                    }
+                    else if (env.OCP_RELEASE == "4.13"){
+                        env.REDHAT_RELEASE = "9.2"
+                        env.GOLANG_TARBALL = "https://golang.org/dl/go1.19.linux-ppc64le.tar.gz"
+                    }
+                    else if (env.OCP_RELEASE == "4.14") {
+                        env.REDHAT_RELEASE = "9.2"
+                        env.GOLANG_TARBALL = "https://golang.org/dl/go1.20.linux-ppc64le.tar.gz"
+                    }
+                    else if (env.OCP_RELEASE == "4.15") {
+                        env.REDHAT_RELEASE = "9.3"
+                        env.GOLANG_TARBALL = "https://golang.org/dl/go1.22.0.linux-ppc64le.tar.gz"
+                    }
+                    else if (env.OCP_RELEASE == "4.16"){
+                        env.REDHAT_RELEASE = "9.4"
+                        env.GOLANG_TARBALL = "https://golang.org/dl/go1.22.0.linux-ppc64le.tar.gz"
                     }
                     else {
-                        env.RHCOS_RELEASE = env.OCP_RELEASE
+                        env.REDHAT_RELEASE = "9.6"
+                        env.GOLANG_TARBALL = "https://golang.org/dl/go1.24.9.linux-ppc64le.tar.gz"
                     }
+
+                    // Added a condition for RHCOS_RELEASE to be set to 4.19 for OCP above 4.19
+                    if (env.OCP_RELEASE == "4.19" || env.OCP_RELEASE == "4.21"){
+                        env.RHCOS_RELEASE = "4.19"
+                    }
+                    else if (env.OCP_RELEASE == "4.22" || env.OCP_RELEASE == "5.0"){
+                        env.RHCOS_RELEASE = "9.8"
+                    }
+                    // else if (env.OCP_RELEASE == "5.0"){
+                    //     env.RHCOS_RELEASE = "10.2"
+                    // }
+                    else {
+                        env.RHCOS_RELEASE = "${env.OCP_RELEASE}"
+                    }
+                    env.OPENSHIFT_INSTALL_TARBALL="https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/ppc64le/openshift-install-linux.tar.gz"
+                    env.OPENSHIFT_CLIENT_TARBALL="https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/ppc64le/openshift-client-linux.tar.gz"
+                    env.OPENSHIFT_CLIENT_TARBALL_AMD64="https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/amd64/openshift-client-linux.tar.gz"
                 }
             }
         }
         stage('pull artifact') {
             steps {
                 script {
-                    getArtifacts("mirror-openshift-release", "latest-${OCP_RELEASE}-build.txt")
                     getArtifacts("powervm/poll-powervc-images", "cicd-rhcos-${RHCOS_RELEASE}.latest.txt")
                     getArtifacts("powervm/poll-powervc-images", "cicd-rhel-${REDHAT_RELEASE}.latest.txt")
                 }
@@ -129,7 +151,7 @@ pipeline {
                                     nerdctl login -u ${ARTIFACTORY_USER} -p ${ARTIFACTORY_TOKEN} docker-na.artifactory.swg-devops.com/sys-powercloud-docker-local
                                     nerdctl pull ${OPENSHIFT_IMAGE}
                                     if [ $? -ne 0 ]; then
-                                        echo "${OPENSHIFT_IMAGE}  not found"
+                                        echo "${OPENSHIFT_IMAGE} not found"
                                         exit 1
                                     fi
                                     nerdctl rmi ${OPENSHIFT_IMAGE}
@@ -139,20 +161,13 @@ pipeline {
                                env.OPENSHIFT_IMAGE=env.BUILD
                             }
                         }
-                        else if ( currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause') ){
-                            // When its cron job
-                            if (fileExists("deploy/artifactory/latest-${OCP_RELEASE}-build.txt")) {
-                                env.OPENSHIFT_IMAGE = readFile "deploy/artifactory/latest-${OCP_RELEASE}-build.txt"
-                                env.OPENSHIFT_IMAGE = env.OPENSHIFT_IMAGE.trim()
-                            }
-                            else {
-                                echo "latest-${OCP_RELEASE}-build.txt file does not exist. Please check mirror-openshift-release job"
-                                throw err
-                            }
-                        } else {
+                        else {
                             echo "CURRENT build is empty"
                             throw err
                         }
+
+                        currentBuild.description = "OCP Build: ${env.OPENSHIFT_IMAGE.split(':')[1].trim()}"
+
                         if (fileExists("deploy/artifactory/cicd-rhcos-${RHCOS_RELEASE}.latest.txt")) {
                             env.RHCOS_IMAGE = readFile "deploy/artifactory/cicd-rhcos-${RHCOS_RELEASE}.latest.txt"
                             env.RHCOS_IMAGE_NAME = env.RHCOS_IMAGE.split()[0].trim()
@@ -171,9 +186,12 @@ pipeline {
                             echo "cicd-rhel-${REDHAT_RELEASE}.latest.txt file does not exist. Please check poll-powervc-images job"
                             throw err
                         }
-                        env.OCP_RELEASE_TAG = env.OPENSHIFT_IMAGE.split(":")[1].trim()
-                        env.BUILD = env.OCP_RELEASE_TAG
-                        currentBuild.description = "OCP Build: ${OCP_RELEASE_TAG}"
+                        if (env.DEPLOY_MASTER == "false")
+                        {
+                            echo "Cluster cant deploy without master"
+                            throw err
+                        }
+                        
                         createTemplate(env.OS_AUTH_URL, env.MASTER_VCPUS , "${MASTER_MEMORY_MB}", env.MASTER_PROCESSORS, env.MASTER_TEMPLATE)
                         createTemplate(env.OS_AUTH_URL, env.WORKER_VCPUS , "${WORKER_MEMORY_MB}", env.WORKER_PROCESSORS, env.WORKER_TEMPLATE)
                         createTemplate(env.OS_AUTH_URL, env.BASTION_VCPUS , "${BASTION_MEMORY_MB}", env.BASTION_PROCESSORS, env.BASTION_TEMPLATE)
@@ -213,114 +231,17 @@ pipeline {
                 setupKubeconfigOcp4()
             }
         }
-        stage('Validate CO status') {
+        
+        // Setup for console UI e2e tests run
+        stage('Setup and run console UI e2e tests.') {
             steps {
-                archiveAllArtifacts("deploy/id_rsa")
-                validateCoStatus()
+                sh '${WORKSPACE}/scripts/console-e2e/setup-console-e2e.sh'
             }
         }
-        stage('Run E2e Tests') {
-            parallel{
-                stage('CRO'){
-                    when { expression { return env.ENABLE_CRO_E2E_TEST == "true"; } }
-                    steps{
-                        script {
-                            ansiColor('xterm') {
-                            echo ""
-                            }
-                            try {
-                                sh '''
-                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/cro_o.sh && ./scripts/operator/cro_o.sh
-                                '''
-                            }
-                            catch(err) {
-                                echo 'Running CROO script failed!'
-                                failedStages.add(env.STAGE_NAME)
-                                throw err
-                            }
-                        }
-                    }
-                }
-                stage('Metallb'){
-                    when { expression { return env.ENABLE_METALLB_E2E_TEST == "true"; } }
-                    steps{
-                        script{
-                            ansiColor('xterm') {
-                            echo ""
-                            }
-                            try {
-                                sh '''
-                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/metallbOP.sh && ./scripts/operator/metallbOP.sh
-                                '''
-                            }
-                            catch(err) {
-                                echo 'Running Metallb script failed!'
-                                failedStages.add(env.STAGE_NAME)
-                                throw err
-                            }
-                        }
-                    }
-                }
-                stage('Compliance operator tests'){
-                    when { expression { return env.ENABLE_CO_E2E_TEST == "true"; } }
-                    steps{
-                        script{
-                            ansiColor('xterm') {
-                            echo ""
-                            }
-                            try {
-                                sh '''
-                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/compliance_operator.sh && ./scripts/operator/compliance_operator.sh
-                                '''
-                            }
-                            catch(err) {
-                                echo 'Running Compliance_operator script failed!'
-                                failedStages.add(env.STAGE_NAME)
-                                throw err
-                            }
-                        }
-                    }
-                }
-                stage('FIO operator tests'){
-                    when { expression { return env.ENABLE_FIO_E2E_TEST == "true"; } }
-                    steps{
-                        script{
-                            ansiColor('xterm') {
-                            echo ""
-                            }
-                            try {
-                                sh '''
-                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/fio_operator.sh && ./scripts/operator/fio_operator.sh
-                                '''
-                            }
-                            catch(err) {
-                                echo 'Running FIO_operator script failed!'
-                                failedStages.add(env.STAGE_NAME)
-                                throw err
-                            }
-                        }
-                    }
-                }
-                stage('Install LSO') {
-                    when { expression { return env.ENABLE_LSO_INSTALL == "true"; } }
-                    steps {
-                        script {
-                            ansiColor('xterm') {
-                            echo ""
-                            }
-                            try {
-                                sh '''
-                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/lso_operator.sh && ./scripts/operator/lso_operator.sh
-                                '''
-                            }
-                            catch(err) {
-                                echo 'LSO operator installation failed!'
-                                failedStages.add(env.STAGE_NAME)
-                                throw err
-                            }
-                        }
-                    }
-                }
+        
+        stage('Gather pprof and prometheus data') {
+            steps {
+                gatherPrometheusData()
             }
         }
         stage('Waiting to timeout') {
@@ -330,18 +251,18 @@ pipeline {
                         echo ""
                     }
                     try {
-                        TIMEOUT_MIN = TIMEOUT.toInteger()
-                        if ( TIMEOUT_MIN != 0 )
-                        {
-                            TIMEOUT_SEC=TIMEOUT_MIN*60
-                        }
-                        echo "HOLDING THE CLUSTER TEAR DOWN FOR ${TIMEOUT_MIN} MINUTES"
-                        sleep TIMEOUT_SEC
+                            TIMEOUT_MIN = TIMEOUT.toInteger()
+                            if ( TIMEOUT_MIN != 0 )
+                            {
+                                TIMEOUT_SEC=TIMEOUT_MIN*60
+                                echo "HOLDING THE CLUSTER TEAR DOWN FOR ${TIMEOUT_MIN} MINUTES"
+                                sleep TIMEOUT_SEC
+                            }
                         }
                     catch (err) {
-                        echo 'Error ! Timeout stage failed!'
-                        env.FAILED_STAGE=env.STAGE_NAME
-                        throw err
+                            echo 'Error ! Timeout stage failed!'
+                            env.FAILED_STAGE=env.STAGE_NAME
+                            throw err
                     }
                 }
             }
@@ -349,17 +270,35 @@ pipeline {
     }
     post {
         always {
-            archiveAllArtifacts("deploy/croo_e2e_output_*.txt", "deploy/e2e-metallb-repo-logs.txt", "deploy/e2e-metallb-private-logs.txt", "deploy/e2e-output.txt", "deploy/e2e-re-run-output-*.txt", "deploy/fio-e2e-*.txt", "deploy/vars.tfvars")
-            cleanupOcp4Cluster()
-            checkInfraError()
-            script{
-                if ( FAILED_STAGE != "" || !failedStages.isEmpty()  ) {
-                    FAILED_STAGE="${FAILED_STAGE}${failedStages.join(', ')}"
-                    env.MESSAGE = "OCP4 Build: `${BUILD}`, RHCOS: `${env.RHCOS_IMAGE_NAME}`, Failed Stage: `${FAILED_STAGE}`"
+            script {
+                ansiColor('xterm') {
+                    echo ""
+                }
+                try{
+                    sh '''
+                        echo "Copying the test output results ......"
+                        cp -rf /host/out-* ${WORKSPACE}/deploy
+                        cp -rf /host/*.txt ${WORKSPACE}/deploy
+                        cp /host/input.json ${WORKSPACE}/deploy
+                    '''
+                    archiveAllArtifacts("deploy/conformance-parallel-out.txt.tar.gz", "deploy/summary.txt", "deploy/vars.tfvars",
+                        "cpu-pre.pprof", "heap-pre.pprof", "prometheus.tar.gz", "deploy/cron.log", "deploy/${SUITE2RUN}-*.txt", "deploy/input.json", "deploy/out-*/cypress/*")
+                    storeMustGatherLogs()
+                    checkInfraError()
+                    processE2eResults()
+                }
+                catch (err){
+                    echo 'Error ! Always block failed!' 
+                }
+                finally{
+                    cleanupOcp4Cluster()
+                    // Only notify if the build was not aborted or canceled
+                    // if (currentBuild.result != 'ABORTED') {
+                    //     notifyBySlack(currentBuild.result, env.MESSAGE)
+                    // }
+                    cleanWs()
                 }
             }
-            //notifyBySlack(currentBuild.result, env.MESSAGE)
-            cleanWs()
         }
     }
 }
