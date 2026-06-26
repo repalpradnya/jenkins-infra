@@ -54,10 +54,9 @@ cat install.yaml
 cd ../../../..
 
 # Install dependency
-# python3 -m pip install --break-system-packages kubernetes openshift
-# python3 -c "import kubernetes; print('OK')"
+python3 -m pip install --break-system-packages kubernetes openshift
 
-ansible-galaxy collection install kubernetes.core
+# ansible-galaxy collection install kubernetes.core
 ansible-playbook  -i coo-inventory -e @coo_vars.yaml playbooks/ocp-coo.yml 
 
 
