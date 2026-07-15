@@ -6,11 +6,11 @@ ansible all -m setup -a 'gather_subset=!all'
 cd ${WORKSPACE}/ocp4-playbooks-extras 
 
 
-cd playbooks/roles/ocp-cluster-logging/files/
-sed -i '/Deploy app centos-logtest that generates structured data/a\  delegate_to: localhost' loggingstack.yml
-sed -i '/Wait for centos-logtest- pods to come up/a\  delegate_to: localhost' loggingstack.yml
-cat loggingstack.yml
-cd ../../../..
+# cd playbooks/roles/ocp-cluster-logging/files/
+# sed -i '/Deploy app centos-logtest that generates structured data/a\  delegate_to: localhost' loggingstack.yml
+# sed -i '/Wait for centos-logtest- pods to come up/a\  delegate_to: localhost' loggingstack.yml
+# cat loggingstack.yml
+# cd ../../../..
 
 cp examples/ocp_coo_vars.yaml coo_vars.yaml
 sed -i \
@@ -45,18 +45,18 @@ oc create secret generic lokicred-secret \
   --dry-run=client -o yaml | oc apply -f -
 EOF
 
-cd playbooks/roles/ocp-coo/tasks 
-sed -i '/- name: Run ImageDigestMirrorSet/a\          delegate_to: localhost' install.yaml
-sed -i '/- name: Create CatalogSource/a\          delegate_to: localhost' install.yaml
-sed -i '/- name: Run CatalogSource/a\          delegate_to: localhost' install.yaml
-cat install.yaml
+# cd playbooks/roles/ocp-coo/tasks 
+# sed -i '/- name: Run ImageDigestMirrorSet/a\          delegate_to: localhost' install.yaml
+# sed -i '/- name: Create CatalogSource/a\          delegate_to: localhost' install.yaml
+# sed -i '/- name: Run CatalogSource/a\          delegate_to: localhost' install.yaml
+# cat install.yaml
 
-cd ../../../..
+# cd ../../../..
 
 # Install dependency
 python3 -m pip install --break-system-packages kubernetes openshift
 
-ansible-galaxy collection install kubernetes.core
+# ansible-galaxy collection install kubernetes.core
 ansible-playbook  -i coo-inventory -e @coo_vars.yaml playbooks/ocp-coo.yml 
 
 
