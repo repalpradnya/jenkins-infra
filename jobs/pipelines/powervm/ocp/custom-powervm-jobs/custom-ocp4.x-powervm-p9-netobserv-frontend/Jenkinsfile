@@ -59,6 +59,19 @@ pipeline {
     }
 
     stages {
+        stage('Validate Parameters') {
+            steps {
+                script {
+                    if (!params.Release?.trim()) {
+                        error("'Release' parameter is required (e.g. 4.17). Please re-run with 'Build with Parameters'.")
+                    }
+                    if (!params.Build?.trim()) {
+                        error("'Build' parameter is required (quay image or build number). Please re-run with 'Build with Parameters'.")
+                    }
+                }
+            }
+        }
+
         stage('Clone ansible extras') {
             steps {
                 cloneRepo("https://github.com/ocp-power-automation/ocp4-playbooks-extras", "ocp4-playbooks-extras", "*/main")
