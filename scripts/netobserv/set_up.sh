@@ -39,7 +39,6 @@ echo ""
 # Extract the password
 scp -i ${WORKSPACE}/deploy/id_rsa -o StrictHostKeyChecking=no root@${BASTION_IP}:/root/openstack-upi/auth/kubeadmin-password ~/.kube
 KUBEADPASSWD=$(cat ~/.kube/kubeadmin-password)
-echo "Kubeadmin password: ${KUBEADPASSWD}"
 echo ""
 
 # Copy the kubeconfig to the $HOSTDIR/ path
@@ -100,7 +99,6 @@ CLUSTER_HOST_ENTRY=${BASTION_IP}" "${OCP_ROUTES}
 echo "Step-3: Adding cluster host entry to /etc/hosts file ..."
 echo $CLUSTER_HOST_ENTRY | tee -a /etc/hosts
 
-# 
-# Trigger the console-e2e.sh from the ${WORKSPACE}/scripts/ path
-echo "Step-4: Trigger the /console-e2e.sh to run console UI e2e tests:"
-source ${WORKSPACE}/scripts/console-e2e/console-e2e.sh
+# Trigger the frontend.sh to run NETobserv Cypress e2e tests
+echo "Step-4: Trigger frontend.sh to run console UI e2e tests:"
+source ${WORKSPACE}/scripts/netobserv/frontend.sh
