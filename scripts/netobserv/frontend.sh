@@ -222,7 +222,7 @@ if [ "$SUITE2RUN" == 'e2e' -o "$SUITE2RUN" == 'dvt' ]; then
   run_cypress_tests $SUITE2RUN
 else
   printInfo "Kicking off test suite: $SUITE2RUN"
-  run_netobserv_cypress_tests $SUITE2RUN
+  run_cypress_tests $SUITE2RUN
 fi
 
 #echo "DEBUG: VERDICT_P=$VERDICT_P, VERDICT_C=$VERDICT_C"

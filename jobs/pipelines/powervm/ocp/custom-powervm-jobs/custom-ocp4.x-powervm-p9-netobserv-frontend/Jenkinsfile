@@ -90,7 +90,10 @@ pipeline {
                     env.MOUNT_ETCD_RAMDISK = "false"
                     env.SETUP_SQUID_PROXY  = "true"
 
-                    if (env.OCP_RELEASE == "4.15") {
+                    if (env.OCP_RELEASE == "4.14") {
+                        env.REDHAT_RELEASE  = "9.2"
+                        env.GOLANG_TARBALL  = "https://golang.org/dl/go1.21.0.linux-ppc64le.tar.gz"
+                    } else if (env.OCP_RELEASE == "4.15") {
                         env.REDHAT_RELEASE  = "9.3"
                         env.GOLANG_TARBALL  = "https://golang.org/dl/go1.22.0.linux-ppc64le.tar.gz"
                     } else if (env.OCP_RELEASE == "4.16") {
@@ -109,9 +112,17 @@ pipeline {
                         env.RHCOS_RELEASE = "${env.OCP_RELEASE}"
                     }
 
-                    env.OPENSHIFT_INSTALL_TARBALL = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/ppc64le/openshift-install-linux.tar.gz"
-                    env.OPENSHIFT_CLIENT_TARBALL  = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/ppc64le/openshift-client-linux.tar.gz"
-                    env.OPENSHIFT_CLIENT_TARBALL_AMD64 = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/amd64/openshift-client-linux.tar.gz"
+                    // Use stable (GA) URLs for released versions; dev-preview for pre-release
+                    def stableReleases = ["4.14", "4.15", "4.16", "4.17", "4.18"]
+                    if (stableReleases.contains(env.OCP_RELEASE)) {
+                        env.OPENSHIFT_INSTALL_TARBALL    = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp/latest-${OCP_RELEASE}/ppc64le/openshift-install-linux.tar.gz"
+                        env.OPENSHIFT_CLIENT_TARBALL     = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp/latest-${OCP_RELEASE}/ppc64le/openshift-client-linux.tar.gz"
+                        env.OPENSHIFT_CLIENT_TARBALL_AMD64 = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp/latest-${OCP_RELEASE}/amd64/openshift-client-linux.tar.gz"
+                    } else {
+                        env.OPENSHIFT_INSTALL_TARBALL    = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/ppc64le/openshift-install-linux.tar.gz"
+                        env.OPENSHIFT_CLIENT_TARBALL     = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/ppc64le/openshift-client-linux.tar.gz"
+                        env.OPENSHIFT_CLIENT_TARBALL_AMD64 = "https://mirror.openshift.com/pub/openshift-v4/multi/clients/ocp-dev-preview/candidate-${OCP_RELEASE}/amd64/openshift-client-linux.tar.gz"
+                    }
                 }
             }
         }
