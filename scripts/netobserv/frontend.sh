@@ -37,22 +37,25 @@ function printInfo() {
 
 # $1=(optional) test suite name to run
 function run_cypress_tests() {
-  test "$DRIVER" == "protractor" && return #NEEDSATTN
   local RC=0
+  local PLUGINDIR="/root/network-observability-console-plugin"
 
-  if [[ ! $PWD = '/root/console/frontend' ]]; then
-    cd $ROOTDIR"/frontend"
+  cd "$PLUGINDIR/web"
+
+  # Install dependencies if needed
+  if [ ! -d node_modules ]; then
+    npm install
   fi
 
-  if [ "$1" == 'e2e' -o "$1" == 'dvt' -o -z "$1" ]; then
-    printInfo "Starting all Cypress tests" 1
-    ./integration-tests/test-cypress.sh -p console -h true | tee $HOSTDIR"/${SUITE2RUN}-${NOW}.txt"
-  else # specific suite
-    #TEST_SUITE=$(echo $SUITE2RUN | cut -d '/' -f 3 | cut -d '.' -f 1)
-    printInfo "Starting Cypress for '$SUITE2RUN'" 1
-    ./integration-tests/test-cypress.sh -p console -s "${SUITE2RUN}" -h true | tee $HOSTDIR"/${SUITE2RUN}-${NOW}.txt"
+  if [ "$1" == 'e2e' -o -z "$1" ]; then
+    printInfo "Starting all NETobserv Cypress tests" 1
+    NO_COLOR=1 npm run cypress:run 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
+  else
+    printInfo "Starting NETobserv Cypress for spec '$1'" 1
+    NO_COLOR=1 npx cypress run --spec "cypress/e2e/**/${1}*" 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
   fi
   test $? -eq 0 || RC=1
+
   local RUN=1
   if [ $RC -ne 0 -a $RETRYMAX -ne 0 ]; then
     while [ $RC -ne 0 -a $RUN -le $RETRYMAX ]; do
@@ -67,14 +70,16 @@ function run_cypress_tests() {
 
 # $1=epoch (just to be unique across runs inside the same container), $2=next run#
 function rerun_cypress_tests() {
-  mkdir $OUTDIR/cypress-$1; mv $OUTDIR/cypress $OUTDIR/cypress_report*.json $OUTDIR/cypress-$1
+  local PLUGINDIR="/root/network-observability-console-plugin/web"
+  mkdir -p "$OUTDIR/cypress-$1"
+  mv "$OUTDIR/cypress" "$OUTDIR"/cypress_report*.json "$OUTDIR/cypress-$1" 2>/dev/null || true
   FAILED_SPECS=`mktemp`
-  jq -r '.results[] | {file: .file, test: {title: (.suites[0].tests[]          | .title), result: (.suites[0].tests[]          | .state)}} | select(.test.result|test("^fail")) | .file' $OUTDIR/cypress-$1/*.json >  $FAILED_SPECS
-  jq -r '.results[] | {file: .file, test: {title: (.suites[0].suites[].tests[] | .title), result: (.suites[0].suites[].tests[] | .state)}} | select(.test.result|test("^fail")) | .file' $OUTDIR/cypress-$1/*.json >> $FAILED_SPECS
+  jq -r '.results[] | {file: .file, test: {title: (.suites[0].tests[]          | .title), result: (.suites[0].tests[]          | .state)}} | select(.test.result|test("^fail")) | .file' "$OUTDIR/cypress-$1"/*.json >  $FAILED_SPECS 2>/dev/null || true
+  jq -r '.results[] | {file: .file, test: {title: (.suites[0].suites[].tests[] | .title), result: (.suites[0].suites[].tests[] | .state)}} | select(.test.result|test("^fail")) | .file' "$OUTDIR/cypress-$1"/*.json >> $FAILED_SPECS 2>/dev/null || true
   local RC=0
   for SPEC in $(cat $FAILED_SPECS | sort | uniq); do
     printInfo "Starting Cypress rerun for $SPEC (#$2)" 1
-    ./integration-tests/test-cypress.sh -p console -s $SPEC -h true | tee $HOSTDIR"/$(echo $SPEC | cut -d '/' -f 3 | cut -d '.' -f 1)-${RC}-${NOW}.txt"
+    cd "$PLUGINDIR" && NO_COLOR=1 npx cypress run --spec "$SPEC" 2>&1 | tee "$HOSTDIR/$(basename $SPEC .cy.ts)-${RC}-${NOW}.txt"
     CYRC=$?
     test $CYRC -eq 0 && echo "INFO: Cypress rerun for $SPEC passed!! :-)" || echo "WARNING: Cypress rerun for $SPEC failed :-("
     test $CYRC -ne 0 && RC=1
@@ -146,93 +151,45 @@ else
 fi
 
 NOW=$(date +%Y%m%d-%H%M)
-#echo "NOW=$NOW"
-ROOTDIR=/root/console
-REFRESH=$(jq -r .refresh $PARAMSJ)
+PLUGINDIR=/root/network-observability-console-plugin
 
-[ -z $REFRESH ] && REFRESH=false && printInfo "No refresh param found in input.json, defaulting to false"
+# Login to the cluster
+oc login -u kubeadmin -p "$OCADMPW" "$OAPIURL" --insecure-skip-tls-verify
 
-# Switch to the /root dir if not already there
-[ $pwd != '/root' ] && cd /root
+CONSOLE_URL=$(oc get consoles.config.openshift.io cluster -o jsonpath='{.status.consoleURL}')
 
-printInfo "Checking for existing 'console' directory at $ROOTDIR"
-echo ""
-if [ ! -d $ROOTDIR -o "$REFRESH" == "true" ]; then
-  if [ -e $HOSTDIR/console-built.tgz ]; then
-    printInfo "Unzipping pre-built console code"
-    tar xzf $HOSTDIR/console-built.tgz
-    cd $ROOTDIR
-  else
-    printInfo "Building latest console code from Git"
-    git clone https://github.com/openshift/console.git
-    [ -n $(jq -r .ocp_version $PARAMSJ) ] && git checkout $(jq -r .ocp_version $PARAMSJ) || printInfo "OCP version is not found in the input.json, builing code with main branch." && git checkout main
-    cd $ROOTDIR
-    ./build.sh
-    [ $? -ne 0 ] && git checkout -- frontend/yarn.lock ; ./build.sh
-  fi
-  printInfo "Done!"
-else
-  printInfo "Using existing 'console' directory"
-  cd $ROOTDIR
+# Set Cypress env vars required by the NETobserv plugin's cypress.config.ts
+export IS_OPENSHIFT="true"
+export CYPRESS_BASE_URL="${CONSOLE_URL}"
+export CYPRESS_LOGIN_USERS="${OCADMPW}"
+if [ -n "$(jq -r '.idp_user // empty' $PARAMSJ)" ] && [ -n "$(jq -r '.idp_password // empty' $PARAMSJ)" ]; then
+  export CYPRESS_LOGIN_IDP=$(jq -r .idp $PARAMSJ)
+  export CYPRESS_LOGIN_USERS="$(jq -r .idp_user $PARAMSJ):$(jq -r .idp_password $PARAMSJ)"
 fi
 
-echo ""
-df -h .
+SUITE2RUN=$(jq -r .suite $PARAMSJ)
+[ -z "$SUITE2RUN" -o "$SUITE2RUN" == "null" ] && SUITE2RUN="Network_Observability"
 
-echo ""
-printInfo "Priming runtime env"
-
-oc login -u kubeadmin -p $OCADMPW $OAPIURL --insecure-skip-tls-verify
-
-export BRIDGE_BASE_ADDRESS="$(oc get consoles.config.openshift.io cluster -o jsonpath='{.status.consoleURL}')"
-export BRIDGE_KUBEADMIN_PASSWORD=$OCADMPW
-
-export CHROME_VERSION=$(google-chrome --version | sed 's/Google Chrome //')
-
-# FAILFAST=$(jq -r .failfast $PARAMSJ)
-# [ "$FAILFAST" != "yes" -a "$FAILFAST" != "true" ] && export NO_FAILFAST=false
-
-if [ -z "$BRIDGE_E2E_BROWSER_NAME" ]; then
-  BROWSER=$(jq -r .browser $PARAMSJ)
-  [ -n "$BROWSER" ] && export BRIDGE_E2E_BROWSER_NAME=$BROWSER
-fi
-
-JASMINETO=$(jq -r .jtimeout $PARAMSJ)
-[ -n "$JASMINETO" ] && export BRIDGE_JASMINE_TIMEOUT=$JASMINETO
+RETRYMAX=$(jq -r .retries $PARAMSJ)
+[ -z "$RETRYMAX" -o "$RETRYMAX" == "null" ] && RETRYMAX=2
 
 DRIVER=$(jq -r .driver $PARAMSJ)
 
-SUITE2RUN=$(jq -r .suite $PARAMSJ)
-[ -z "$SUITE2RUN" ] && SUITE2RUN=e2e #NEEDSATTN
-
-RETRYMAX=$(jq -r .retries $PARAMSJ)
-[ -z "$RETRYMAX" -o "$RETRYMAX" == "null" ] && RETRYMAX=2 #NEEDSATTN
-
-# export CYPRESS_PLUGIN_PULL_SPEC=quay.io/miyamoto_h/console-demo-plugin:latest
-export CYPRESS_PLUGIN_PULL_SPEC=quay.io/rh_ee_ahonkala/console-demo-plugin:ppc64le
-
-OUTDIR=${ROOTDIR}"/frontend/gui_test_screenshots"
-VERDICT_P=1 # did Protractor tests pass(=0) after all?
-VERDICT_C=1 # did Cypress    tests pass(=0) after all?
+OUTDIR="${PLUGINDIR}/web/gui_test_screenshots"
+VERDICT_P=0 # Protractor not used
+VERDICT_C=1 # did Cypress tests pass(=0) after all?
 
 echo ""
-if [ "$SUITE2RUN" == 'e2e' -o "$SUITE2RUN" == 'dvt' ]; then
-  test "$SUITE2RUN" == 'dvt' && adjust_for_dvt
-  printInfo "Kicking off available test suites"
-  run_cypress_tests $SUITE2RUN
-else
-  printInfo "Kicking off test suite: $SUITE2RUN"
-  run_cypress_tests $SUITE2RUN
-fi
-
-#echo "DEBUG: VERDICT_P=$VERDICT_P, VERDICT_C=$VERDICT_C"
+printInfo "Kicking off NETobserv Cypress test suite: $SUITE2RUN" 1
+run_cypress_tests "$SUITE2RUN"
+VERDICT_C=$?
 
 echo ""
-if [ -w $HOSTDIR ]; then
-  cp -r $OUTDIR $HOSTDIR/out-$NOW
+if [ -w "$HOSTDIR" ]; then
+  cp -r "$OUTDIR" "$HOSTDIR/out-$NOW" 2>/dev/null || true
   printInfo "Copied output to directory: out-$NOW"
 else
   echo "WARN: $HOSTDIR not writeable, unable to copy output..."
 fi
 
-exit `expr $VERDICT_P + $VERDICT_C`
+exit $VERDICT_C
