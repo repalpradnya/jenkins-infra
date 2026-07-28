@@ -112,9 +112,8 @@ function adjust_for_dvt() {
      /tmp/
 }
 
-HOSTDIR=/host #NEEDSATTN
+HOSTDIR=/host
 [ -f /input.json ] && PARAMSJ=/input.json || PARAMSJ=$HOSTDIR/input.json
-jq '. | del(.password)' $PARAMSJ
 
 OAPIURL=$(jq -r .apiurl $PARAMSJ)
 if [ -z "$OAPIURL" ]; then
@@ -122,29 +121,20 @@ if [ -z "$OAPIURL" ]; then
   exit 1
 fi
 
-OCADMPW=$(jq -r .password $PARAMSJ)
+# kubeadmin password — read from input.json only when sourced standalone
+# (when sourced from set_up.sh, OCADMPW is already set in the parent shell)
+if [ -z "${OCADMPW:-}" ]; then
+  OCADMPW=$(jq -r '.password // empty' $PARAMSJ)
+fi
 if [ -z "$OCADMPW" ]; then
-  printInfo "ERROR: no kubeadmin password  provided -- aborting..."
+  printInfo "ERROR: no kubeadmin password provided -- aborting..."
   exit 2
-else
-  export BRIDGE_KUBEADMIN_PASSWORD=$OCADMPW
 fi
 
-# Check for IDP user other than kubeadmin
-if [ -z $(jq -r .idp $PARAMSJ) ]; then
-  printInfo "WARNING: IDP not found in the input parameters, using default kubeadmin."
-  export CYPRESS_LOGIN_IDP="kube:admin"
-  export CYPRESS_LOGIN_USERS="kubeadmin:${OCADMPW}"
-elif [ -n "$(jq -r .idp_user $PARAMSJ)" ] && [ -n "$(jq -r .idp_password $PARAMSJ)" ]; then
-  export CYPRESS_LOGIN_IDP=$(jq -r .idp $PARAMSJ)
-  export CYPRESS_LOGIN_USERS=$(jq -r .idp_user $PARAMSJ)":"$(jq -r .idp_password $PARAMSJ)
-  printInfo "Configured $(jq -r .idp $PARAMSJ) IDP for multi-user auth test"
-fi
-
-# Check if kubeconfig is on the path $HOSTDIR/kubeconfig
-if [ -e $HOSTDIR/kubeconfig ]; then
-  export KUBECONFIG=$HOSTDIR/kubeconfig
-  export CYPRESS_KUBECONFIG_PATH=$HOSTDIR/kubeconfig
+# Check if kubeconfig is present
+if [ -e "$HOSTDIR/kubeconfig" ]; then
+  export KUBECONFIG="$HOSTDIR/kubeconfig"
+  export CYPRESS_KUBECONFIG_PATH="$HOSTDIR/kubeconfig"
 else
   printInfo "ERROR: No kubeconfig provided -- aborting...."
   exit 1
