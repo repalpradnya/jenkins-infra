@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Setup and run NETobserv console plugin Cypress e2e tests
-NETOBSERV_PLUGIN_REPO="https://github.com/netobserv/network-observability-console-plugin"
+NETOBSERV_PLUGIN_REPO="https://github.com/netobserv/netobserv-web-console.git"
 HOSTDIR=/host
-PLUGINDIR=/root/network-observability-console-plugin
+PLUGINDIR=/root/netobserv-web-console
 
 # Create /host directory if it does not exist
 if [ ! -d "$HOSTDIR" ]; then

@@ -38,7 +38,7 @@ function printInfo() {
 # $1=(optional) test suite name to run
 function run_cypress_tests() {
   local RC=0
-  local PLUGINDIR="/root/network-observability-console-plugin"
+  local PLUGINDIR="/root/netobserv-web-console"
 
   cd "$PLUGINDIR/web"
 
@@ -70,7 +70,7 @@ function run_cypress_tests() {
 
 # $1=epoch (just to be unique across runs inside the same container), $2=next run#
 function rerun_cypress_tests() {
-  local PLUGINDIR="/root/network-observability-console-plugin/web"
+  local PLUGINDIR="/root/netobserv-web-console/web"
   mkdir -p "$OUTDIR/cypress-$1"
   mv "$OUTDIR/cypress" "$OUTDIR"/cypress_report*.json "$OUTDIR/cypress-$1" 2>/dev/null || true
   FAILED_SPECS=`mktemp`
@@ -151,7 +151,7 @@ else
 fi
 
 NOW=$(date +%Y%m%d-%H%M)
-PLUGINDIR=/root/network-observability-console-plugin
+PLUGINDIR=/root/netobserv-web-console
 
 # Login to the cluster
 oc login -u kubeadmin -p "$OCADMPW" "$OAPIURL" --insecure-skip-tls-verify
