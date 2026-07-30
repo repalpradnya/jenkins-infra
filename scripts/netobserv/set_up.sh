@@ -60,7 +60,8 @@ sed -i 's/htpasswd_identity_provider: false/htpasswd_identity_provider: true/g' 
 sed -i 's/htpasswd_username: ""/htpasswd_username: '"${HTPASS_USER}"'/g' all.yaml
 sed -i 's/htpasswd_password: ""/htpasswd_password: '"${HTPASS_PASSWD}"'/g' all.yaml
 sed -i 's/htpasswd_user_role: ""/htpasswd_user_role: "self-provisioner"/g' all.yaml
-ansible-playbook -i inventory -e @all.yaml playbooks/main.yml
+# Run only the htpasswd playbook — avoids unrelated role errors in main.yml
+ansible-playbook -i inventory -e @all.yaml playbooks/ocp-htpasswd-identity-provider.yml
 if [ $? -ne 0 ]; then
   echo "Error creating htpasswd IDP user. Exiting..."
   exit 1
