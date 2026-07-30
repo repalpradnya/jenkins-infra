@@ -75,6 +75,11 @@ echo "${BASTION_IP} ${OCP_ROUTES}" | tee -a /etc/hosts
 # ── Step 5: Write input.json for reference/archiving ─────────────────────────
 CONSOLE_URL=$(oc get consoles.config.openshift.io cluster -o jsonpath='{.status.consoleURL}')
 
+# Apply defaults for variables that may not be set in all environments
+SUITE2RUN="${SUITE2RUN:-Network_Observability}"
+RETRIES="${RETRIES:-2}"
+OCP_RELEASE="${OCP_RELEASE:-}"
+
 cat > "$HOSTDIR/input.json" <<EOF
 {
   "apiurl": "${APIURL}",
