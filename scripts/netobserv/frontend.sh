@@ -46,13 +46,13 @@ function run_cypress_tests() {
     npm install
   fi
 
-  if [ "$1" == 'e2e' -o -z "$1" ]; then
-    printInfo "Starting all NETobserv Cypress tests" 1
-    NO_COLOR=1 npm run cypress:run 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
-  else
-    printInfo "Starting NETobserv Cypress for spec '$1'" 1
-    NO_COLOR=1 npx cypress run --spec "cypress/e2e/**/${1}*" 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
-  fi
+  # Use local npx from node_modules — global npx may not be in PATH in the container
+  local NPX="./node_modules/.bin/npx"
+  local CYPRESS="./node_modules/.bin/cypress"
+
+  printInfo "Starting NETobserv Cypress tests" 1
+  # Run all specs — suite/tag filtering is handled by cypress.config.ts env vars
+  NO_COLOR=1 "$CYPRESS" run 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
   test $? -eq 0 || RC=1
 
   local RUN=1
@@ -70,6 +70,7 @@ function run_cypress_tests() {
 # $1=epoch (just to be unique across runs inside the same container), $2=next run#
 function rerun_cypress_tests() {
   local PLUGINDIR="/root/netobserv-web-console/web"
+  local CYPRESS="${PLUGINDIR}/node_modules/.bin/cypress"
   mkdir -p "$OUTDIR/cypress-$1"
   mv "$OUTDIR/cypress" "$OUTDIR"/cypress_report*.json "$OUTDIR/cypress-$1" 2>/dev/null || true
   FAILED_SPECS=`mktemp`
@@ -78,7 +79,7 @@ function rerun_cypress_tests() {
   local RC=0
   for SPEC in $(cat $FAILED_SPECS | sort | uniq); do
     printInfo "Starting Cypress rerun for $SPEC (#$2)" 1
-    cd "$PLUGINDIR" && NO_COLOR=1 npx cypress run --spec "$SPEC" 2>&1 | tee "$HOSTDIR/$(basename $SPEC .cy.ts)-${RC}-${NOW}.txt"
+    cd "$PLUGINDIR" && NO_COLOR=1 "$CYPRESS" run --spec "$SPEC" 2>&1 | tee "$HOSTDIR/$(basename $SPEC .cy.ts)-${RC}-${NOW}.txt"
     CYRC=$?
     test $CYRC -eq 0 && echo "INFO: Cypress rerun for $SPEC passed!! :-)" || echo "WARNING: Cypress rerun for $SPEC failed :-("
     test $CYRC -ne 0 && RC=1
