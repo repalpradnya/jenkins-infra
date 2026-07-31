@@ -18,8 +18,7 @@
 # $1=message, $2=type (2=block, 1=standout, 0=subtle=default)
 function printInfo() {
   msg=$1
-  type=$2
-  test -z "$type" && type=0
+  type=${2:-0}
   test $type -gt 0 && echo ""
   len=`expr 100 - ${#msg}`
   echo -n "INFO: $msg "
