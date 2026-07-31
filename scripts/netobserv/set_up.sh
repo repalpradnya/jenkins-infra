@@ -101,4 +101,6 @@ echo ""
 
 # ── Step 6: Run NETobserv Cypress e2e tests ───────────────────────────────────
 echo "Step-6: Running NETobserv Cypress e2e tests via frontend.sh..."
+# Export kubeadmin password under the name frontend.sh expects
+export OCADMPW="${KUBEADPASSWD}"
 source "${WORKSPACE}/scripts/netobserv/frontend.sh"
