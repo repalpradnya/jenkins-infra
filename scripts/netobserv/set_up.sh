@@ -80,13 +80,15 @@ SUITE2RUN="${SUITE2RUN:-Network_Observability}"
 RETRIES="${RETRIES:-2}"
 OCP_RELEASE="${OCP_RELEASE:-}"
 
+# Cypress logs in as kubeadmin (kube:admin IDP) — the htpasswd user01 is only used by
+# multi-user RBAC tests that call 'oc adm policy add-cluster-role-to-user' at runtime.
 cat > "$HOSTDIR/input.json" <<EOF
 {
   "apiurl": "${APIURL}",
   "console_url": "${CONSOLE_URL}",
-  "idp": "${IDP_NAME}",
-  "idp_user": "${HTPASS_USER}",
-  "idp_password": "${HTPASS_PASSWD}",
+  "idp": "kube:admin",
+  "idp_user": "kubeadmin",
+  "idp_password": "${KUBEADPASSWD}",
   "driver": "Cypress",
   "suite": "${SUITE2RUN}",
   "browser": "electron",
