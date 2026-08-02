@@ -51,8 +51,8 @@ function run_cypress_tests() {
   local CYPRESS="./node_modules/.bin/cypress"
 
   printInfo "Starting NETobserv Cypress tests" 1
-  # Run all specs — suite/tag filtering is handled by cypress.config.ts env vars
-  NO_COLOR=1 "$CYPRESS" run 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
+  # Run only integration-tests/ — e2e/ specs require a local dev server (localhost:9001) not present in CI
+  NO_COLOR=1 "$CYPRESS" run --spec "cypress/integration-tests/**" 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
   test $? -eq 0 || RC=1
 
   local RUN=1
@@ -151,7 +151,9 @@ CONSOLE_URL=$(oc get consoles.config.openshift.io cluster -o jsonpath='{.status.
 # Set Cypress env vars required by the NETobserv plugin's cypress.config.ts
 export IS_OPENSHIFT="true"
 export CYPRESS_BASE_URL="${CONSOLE_URL}"
-export CYPRESS_LOGIN_USERS="${OCADMPW}"
+# Default to kubeadmin login; override with IDP user if both idp_user and idp_password are present in input.json
+export CYPRESS_LOGIN_IDP="kube:admin"
+export CYPRESS_LOGIN_USERS="kubeadmin:${OCADMPW}"
 if [ -n "$(jq -r '.idp_user // empty' $PARAMSJ)" ] && [ -n "$(jq -r '.idp_password // empty' $PARAMSJ)" ]; then
   export CYPRESS_LOGIN_IDP=$(jq -r .idp $PARAMSJ)
   export CYPRESS_LOGIN_USERS="$(jq -r .idp_user $PARAMSJ):$(jq -r .idp_password $PARAMSJ)"
