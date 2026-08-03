@@ -11,15 +11,41 @@ if [ ! -d "$HOSTDIR" ]; then
   mkdir "$HOSTDIR"
 fi
 
-# ── Step 1: Clone the NETobserv console plugin repo ──────────────────────────
+# ── Step 1: Clone the NETobserv console plugin repo (branch depends on OCP version) ──
 echo "Step-1: Cloning network-observability-console-plugin repository"
 echo ""
+
+# Select branch based on OCP release:
+#   main      → OCP >= 4.22
+#   main-pf5  → OCP 4.16 – 4.21
+#   main-pf4  → OCP 4.14 – 4.15
+OCP_RELEASE="${OCP_RELEASE:-}"
+OCP_MAJOR=$(echo "${OCP_RELEASE}" | cut -d. -f1)
+OCP_MINOR=$(echo "${OCP_RELEASE}" | cut -d. -f2)
+
+if [ -n "${OCP_MAJOR}" ] && [ -n "${OCP_MINOR}" ]; then
+  if [ "${OCP_MAJOR}" -gt 4 ] || { [ "${OCP_MAJOR}" -eq 4 ] && [ "${OCP_MINOR}" -ge 22 ]; }; then
+    PLUGIN_BRANCH="main"
+  elif [ "${OCP_MINOR}" -ge 16 ]; then
+    PLUGIN_BRANCH="main-pf5"
+  else
+    PLUGIN_BRANCH="main-pf4"
+  fi
+else
+  echo "WARNING: OCP_RELEASE not set, defaulting to main-pf5 branch"
+  PLUGIN_BRANCH="main-pf5"
+fi
+echo "OCP_RELEASE=${OCP_RELEASE} → using branch: ${PLUGIN_BRANCH}"
+
 cd /root
 if [ -d "$PLUGINDIR" ]; then
-  echo "Plugin directory already exists, pulling latest..."
-  cd "$PLUGINDIR" && git pull
+  echo "Plugin directory already exists, checking out ${PLUGIN_BRANCH}..."
+  cd "$PLUGINDIR"
+  git fetch origin
+  git checkout "${PLUGIN_BRANCH}"
+  git pull origin "${PLUGIN_BRANCH}"
 else
-  git clone "$NETOBSERV_PLUGIN_REPO"
+  git clone --branch "${PLUGIN_BRANCH}" "$NETOBSERV_PLUGIN_REPO"
   cd "$PLUGINDIR"
 fi
 
