@@ -56,6 +56,8 @@ pipeline {
         SUITE2RUN               = "${params.Suite}"
         RETRIES                 = "${params.Retries}"
         JTIMEOUT                = "180000"
+        // NetObserv catalog source image — passed to Cypress as NOO_CS_IMAGE
+        MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE = "quay.io/redhat-user-workloads/ocp-network-observab-tenant/catalog-zstream:latest"
     }
 
     stages {

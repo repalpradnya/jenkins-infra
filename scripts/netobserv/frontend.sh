@@ -151,6 +151,8 @@ CONSOLE_URL=$(oc get consoles.config.openshift.io cluster -o jsonpath='{.status.
 # Set Cypress env vars required by the NETobserv plugin's cypress.config.ts
 export IS_OPENSHIFT="true"
 export CYPRESS_BASE_URL="${CONSOLE_URL}"
+# Catalog source image for NetObserv operator install — overrides the default in netobserv.ts
+export MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE="${MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE:-quay.io/redhat-user-workloads/ocp-network-observab-tenant/catalog-zstream:latest}"
 # Default to kubeadmin login; override with IDP user if both idp_user and idp_password are present in input.json
 export CYPRESS_LOGIN_IDP="kube:admin"
 export CYPRESS_LOGIN_USERS="kubeadmin:${OCADMPW}"
