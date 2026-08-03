@@ -238,24 +238,6 @@ pipeline {
             }
         }
 
-        stage('Debug: netobserv pod status') {
-            steps {
-                sh '''
-                    export KUBECONFIG=/host/kubeconfig
-                    echo "====== Pods in netobserv namespace ======"
-                    oc get pods -n netobserv -o wide || true
-                    echo "====== Plugin pod describe ======"
-                    oc describe pod -l app=netobserv-plugin -n netobserv || true
-                    echo "====== Loki pod describe ======"
-                    oc describe pod -l app=loki -n netobserv || true
-                    echo "====== FlowCollector status ======"
-                    oc get flowcollector cluster -o yaml | grep -A10 "conditions:" || true
-                    echo "====== NetObserv operator CSV ======"
-                    oc get csv -n openshift-netobserv-operator || true
-                '''
-            }
-        }
-
         stage('Gather pprof and prometheus data') {
             steps {
                 gatherPrometheusData()
