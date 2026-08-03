@@ -98,7 +98,6 @@ cat > "$HOSTDIR/input.json" <<EOF
 }
 EOF
 echo "input.json written to $HOSTDIR/input.json"
-cat "$HOSTDIR/input.json"
 echo ""
 
 # ── Step 6: Run NETobserv Cypress e2e tests ───────────────────────────────────

@@ -50,19 +50,6 @@ function run_cypress_tests() {
   local NPX="./node_modules/.bin/npx"
   local CYPRESS="./node_modules/.bin/cypress"
 
-  # ── Debug: dump cluster state before tests start ─────────────────────────────
-  echo "====== Pods in netobserv namespace ======"
-  oc get pods -n netobserv -o wide || true
-  echo "====== Plugin pod events ======"
-  oc describe pod -l app=netobserv-plugin -n netobserv 2>/dev/null | tail -30 || true
-  echo "====== Loki pod events ======"
-  oc describe pod -l app=loki -n netobserv 2>/dev/null | tail -30 || true
-  echo "====== FlowCollector conditions ======"
-  oc get flowcollector cluster -o yaml 2>/dev/null | grep -A10 "conditions:" || true
-  echo "====== NetObserv operator CSV ======"
-  oc get csv -n openshift-netobserv-operator 2>/dev/null || true
-  echo "====== End debug dump ======"
-
   printInfo "Starting NETobserv Cypress tests" 1
   # Run only integration-tests/ — e2e/ specs require a local dev server (localhost:9001) not present in CI
   NO_COLOR=1 "$CYPRESS" run --spec "cypress/integration-tests/**" 2>&1 | tee "$HOSTDIR/${SUITE2RUN}-${NOW}.txt"
