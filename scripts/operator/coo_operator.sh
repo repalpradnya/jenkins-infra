@@ -45,13 +45,13 @@ oc create secret generic lokicred-secret \
   --dry-run=client -o yaml | oc apply -f -
 EOF
 
-# cd playbooks/roles/ocp-coo/tasks 
-# sed -i '/- name: Run ImageDigestMirrorSet/a\          delegate_to: localhost' install.yaml
-# sed -i '/- name: Create CatalogSource/a\          delegate_to: localhost' install.yaml
-# sed -i '/- name: Run CatalogSource/a\          delegate_to: localhost' install.yaml
-# cat install.yaml
+cd playbooks/roles/ocp-coo/tasks 
+sed -i '/- name: Run ImageDigestMirrorSet/a\          delegate_to: localhost' install.yaml
+sed -i '/- name: Create CatalogSource/a\          delegate_to: localhost' install.yaml
+sed -i '/- name: Run CatalogSource/a\          delegate_to: localhost' install.yaml
+cat install.yaml
 
-# cd ../../../..
+cd ../../../..
 
 # Install dependency
 python3 -m pip install --break-system-packages kubernetes openshift
