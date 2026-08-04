@@ -273,8 +273,6 @@ pipeline {
                 ansiColor('xterm') { echo "" }
                 try {
                     sh '''
-                        echo "====== DEBUG: SSH public key used for bastion access ======"
-                        ssh-keygen -y -f ${WORKSPACE}/deploy/id_rsa 2>/dev/null || echo "Could not extract public key"
                         echo "====== DEBUG: netobserv pod status after test run ======"
                         export KUBECONFIG=/host/kubeconfig
                         oc get pods -n netobserv -o wide 2>/dev/null || true
