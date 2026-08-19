@@ -93,7 +93,7 @@ pipeline {
                     env.SETUP_SQUID_PROXY  = "true"
 
                     if (env.OCP_RELEASE == "4.14") {
-                        env.REDHAT_RELEASE  = "9.7"
+                        env.REDHAT_RELEASE  = "9.8"
                         env.GOLANG_TARBALL  = "https://golang.org/dl/go1.21.0.linux-ppc64le.tar.gz"
                     } else if (env.OCP_RELEASE == "4.15") {
                         env.REDHAT_RELEASE  = "9.3"
