@@ -102,12 +102,14 @@ pipeline {
                         env.REDHAT_RELEASE  = "9.4"
                         env.GOLANG_TARBALL  = "https://golang.org/dl/go1.22.0.linux-ppc64le.tar.gz"
                     } else {
-                        env.REDHAT_RELEASE  = "9.7"
+                        env.REDHAT_RELEASE  = "9.8"
                         env.GOLANG_TARBALL  = "https://golang.org/dl/go1.24.9.linux-ppc64le.tar.gz"
                     }
 
                     if (env.OCP_RELEASE == "4.20" || env.OCP_RELEASE == "4.21") {
                         env.RHCOS_RELEASE = "4.19"
+                    } else if (env.OCP_RELEASE == "4.22" || env.OCP_RELEASE == "5.0") {
+                        env.RHCOS_RELEASE = "9.8"
                     } else {
                         env.RHCOS_RELEASE = "${env.OCP_RELEASE}"
                     }
