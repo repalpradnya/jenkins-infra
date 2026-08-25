@@ -14,7 +14,7 @@ cd ${WORKSPACE}/ocp4-playbooks-extras
 
 cp examples/ocp_coo_vars.yaml coo_vars.yaml
 sed -i \
--e "s|enable_logging_uiplugin:.*$|enable_logging_uiplugin: true|g" \
+-e "s|enable_logging_uiplugin:.*$|enable_logging_uiplugin: false|g" \
 -e "s|enable_distributed_tracing_uiplugin:.*$|enable_distributed_tracing_uiplugin: true|g" \
 -e "s|enable_troubleshootingpanel_uiplugin:.*$|enable_troubleshootingpanel_uiplugin: true|g" \
 -e "s|enable_monitoring_uiplugin:.*$|enable_monitoring_uiplugin: true|g" \
