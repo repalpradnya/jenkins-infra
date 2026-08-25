@@ -13,7 +13,7 @@ pipeline {
         string(defaultValue: '30', description: 'Enter time(in Minutes) to retain the cluster', name: 'KeepFor')
         string(defaultValue: '1.22.4', description: 'Enter the Go Language Version', name: 'GoLangVersion')
         choice(description: 'Select the OpenShift Release', choices: ['4.22','4.21','4.20','4.19','4.18','4.17','4.16','4.15','4.14','4.13','4.12'], name: 'Release')
-        choice(description: 'Select the RedHat Release Version', choices: ['9.7','9.6','8.10'], name: 'RedHatRelease')
+        choice(description: 'Select the RedHat Release Version', choices: ['9.8','9.7','9.6','8.10'], name: 'RedHatRelease')
         choice(description: 'Select the Configuration', choices: ['min','max','odf'], name: 'Config')
         booleanParam(defaultValue: false, name: 'RunInfoE2e', description: 'Select if you want to run INFO e2e tests. E2e runs after cluster Deployed')
         booleanParam(defaultValue: false, name: 'RunCroE2e', description: 'Select if you want to run CRO e2e tests. E2e runs after cluster Deployed')
