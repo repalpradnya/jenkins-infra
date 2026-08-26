@@ -45,9 +45,10 @@ oc create secret generic lokicred-secret \
   --dry-run=client -o yaml | oc apply -f -
 EOF
 
-cd playbooks/roles/ocp-coo/tasks 
+cd playbooks/roles/ocp-coo/tasks
+sed -i '/- name: Copy ImageDigestMirrorSet manifest/a\          delegate_to: localhost' install.yaml
 sed -i '/- name: Run ImageDigestMirrorSet/a\          delegate_to: localhost' install.yaml
-sed -i '/- name: Create CatalogSource/a\          delegate_to: localhost' install.yaml
+sed -i '/- name: Render CatalogSource manifest from template/a\          delegate_to: localhost' install.yaml
 sed -i '/- name: Run CatalogSource/a\          delegate_to: localhost' install.yaml
 cat install.yaml
 
