@@ -71,11 +71,14 @@ pipeline {
         //FIO Operator e2e
         ENABLE_FIO_E2E_TEST = "${params.RunFioE2e}"
         FIO_CATALOGSOURCE_IMAGE = "${params.IndexImagefio}"
-        //COO Operator e2e 
+        //COO Operator e2e
         ENABLE_COO_INSTALL = "${params.InstallCOO}"
         COO_CATALOGSOURCE_IMAGE = "${params.CatalogImageCOO}"
         COS_STANDARD_KEY= credentials('COS_STANDARD_KEY')
         COS_STANDARD_SECRET= credentials('COS_STANDARD_SECRET')
+        //LSO
+        ENABLE_LSO_INSTALL = "${params.InstallLSO}"
+        LSO_CATALOGSOURCE_IMAGE = "${params.IndexImageLSO}"
         //Ip address for metallb Operators E2E
         L2_ADDRESS1="10.20.182.101"
         L2_ADDRESS2="10.20.182.102"
@@ -315,6 +318,26 @@ pipeline {
                     }
                 }  
                 
+                stage('Install LSO') {
+                    when { expression { return env.ENABLE_LSO_INSTALL == "true"; } }
+                    steps {
+                        script {
+                            ansiColor('xterm') {
+                            echo ""
+                            }
+                            try {
+                                sh '''
+                                    cd ${WORKSPACE} && chmod +x ./scripts/operator/lso_operator.sh && ./scripts/operator/lso_operator.sh
+                                '''
+                            }
+                            catch(err) {
+                                echo 'LSO operator installation failed!'
+                                failedStages.add(env.STAGE_NAME)
+                                throw err
+                            }
+                        }
+                    }
+                }
                 stage('Install COO') {
                     when { expression { return env.ENABLE_COO_INSTALL == "true"; } }
                     steps {
@@ -335,7 +358,7 @@ pipeline {
                         }
                     }
                 }
-		stage('IngressNodeFirewall operator tests'){
+  stage('IngressNodeFirewall operator tests'){
                     when { expression { return env.ENABLE_INFO_E2E_TEST == "true"; } }
                     steps{
                         script{
