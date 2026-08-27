@@ -5,13 +5,6 @@ rm -rf ~/.ansible
 ansible all -m setup -a 'gather_subset=!all'
 cd ${WORKSPACE}/ocp4-playbooks-extras 
 
-
-# cd playbooks/roles/ocp-cluster-logging/files/
-# sed -i '/Deploy app centos-logtest that generates structured data/a\  delegate_to: localhost' loggingstack.yml
-# sed -i '/Wait for centos-logtest- pods to come up/a\  delegate_to: localhost' loggingstack.yml
-# cat loggingstack.yml
-# cd ../../../..
-
 cp examples/ocp_coo_vars.yaml coo_vars.yaml
 sed -i \
 -e "s|enable_logging_uiplugin:.*$|enable_logging_uiplugin: true|g" \
@@ -44,15 +37,6 @@ oc create secret generic lokicred-secret \
   -n openshift-logging \
   --dry-run=client -o yaml | oc apply -f -
 EOF
-
-# cd playbooks/roles/ocp-coo/tasks
-# sed -i '/- name: Copy ImageDigestMirrorSet manifest/a\          delegate_to: localhost' install.yaml
-# sed -i '/- name: Run ImageDigestMirrorSet/a\          delegate_to: localhost' install.yaml
-# sed -i '/- name: Render CatalogSource manifest from template/a\          delegate_to: localhost' install.yaml
-# sed -i '/- name: Run CatalogSource/a\          delegate_to: localhost' install.yaml
-# cat install.yaml
-
-# cd ../../../..
 
 # Install dependency
 python3 -m pip install --break-system-packages kubernetes openshift
