@@ -42,6 +42,10 @@ EOF
 python3 -m pip install --break-system-packages kubernetes openshift
 
 # ansible-galaxy collection install kubernetes.core
-ansible-playbook  -i coo-inventory -e @coo_vars.yaml playbooks/ocp-coo.yml 
+ansible-playbook  -i coo-inventory -e @coo_vars.yaml playbooks/ocp-coo.yml
+
+# Collect COO logs from bastion and archive to Jenkins workspace
+ssh -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP} "tar -czf /tmp/coo_testoutput.tar.gz -C /tmp coo_logs 2>/dev/null || true"
+scp -i ${WORKSPACE}/deploy/id_rsa root@${BASTION_IP}:/tmp/coo_testoutput.tar.gz ${WORKSPACE}/deploy/coo_testoutput.tar.gz || true
 
 
