@@ -406,7 +406,7 @@ pipeline {
     }
     post {
         always {
-            archiveAllArtifacts("deploy/croo_e2e_output_*.txt", "deploy/e2e-metallb-repo-logs.txt", "deploy/e2e-metallb-private-logs.txt", "deploy/e2e-output.txt", "deploy/e2e-re-run-output-*.txt", "deploy/fio-e2e-*.txt", "deploy/vars.tfvars")
+            archiveAllArtifacts("deploy/croo_e2e_output_*.txt", "deploy/e2e-metallb-repo-logs.txt", "deploy/e2e-metallb-private-logs.txt", "deploy/e2e-output.txt", "deploy/e2e-re-run-output-*.txt", "deploy/fio-e2e-*.txt", "deploy/vars.tfvars", "deploy/coo_testoutput.tar.gz")
             cleanupOcp4Cluster()
             checkInfraError()
             script{
