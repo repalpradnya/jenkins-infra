@@ -68,7 +68,6 @@ scp -i "${WORKSPACE}/deploy/id_rsa" -o StrictHostKeyChecking=no \
 export KUBECONFIG="$HOSTDIR/kubeconfig"
 
 # ── Step 3: Create htpasswd IDP user for multi-user auth test ─────────────────
-IDP_NAME="htpasswd_identity_provider"
 HTPASS_USER="user01"
 HTPASS_PASSWD="${HTPASS_PASSWD:-keypass123}"
 
@@ -77,17 +76,28 @@ echo "Setting up htpasswd IDP..."
 cd /root
 git clone https://github.com/ocp-power-automation/ocp4-playbooks-extras || true
 cd ocp4-playbooks-extras
+
+# Build inventory pointing at the bastion over SSH
 cp examples/inventory inventory
 sed -i "s|localhost|${BASTION_IP}|g" inventory
 sed -i 's/ansible_connection=local/ansible_connection=ssh/g' inventory
 sed -i "s|ssh|ssh ansible_ssh_private_key_file=${WORKSPACE}/deploy/id_rsa|g" inventory
-cp examples/all.yaml .
-sed -i 's/htpasswd_identity_provider: false/htpasswd_identity_provider: true/g' all.yaml
-sed -i 's/htpasswd_username: ""/htpasswd_username: '"${HTPASS_USER}"'/g' all.yaml
-sed -i 's/htpasswd_password: ""/htpasswd_password: '"${HTPASS_PASSWD}"'/g' all.yaml
-sed -i 's/htpasswd_user_role: ""/htpasswd_user_role: "self-provisioner"/g' all.yaml
-# Run only the htpasswd playbook — avoids unrelated role errors in main.yml
-ansible-playbook -i inventory -e @all.yaml playbooks/ocp-htpasswd-identity-provider.yml
+
+# Write a dedicated vars file — matches the official htpasswd_identity_provider_vars.yaml
+# pattern so we don't need to patch all.yaml at all.
+cat > htpasswd_identity_provider_vars.yaml <<VARS
+htpasswd_identity_provider: true
+htpasswd_username: "${HTPASS_USER}"
+htpasswd_password: "${HTPASS_PASSWD}"
+htpasswd_user_role: "self-provisioner"
+htpasswd_directory: "/root/htpassd_idp"
+htpasswd_delete_user: false
+VARS
+
+# Run only the htpasswd playbook with the dedicated vars file
+ansible-playbook -i inventory \
+  -e @htpasswd_identity_provider_vars.yaml \
+  playbooks/ocp-htpasswd-identity-provider.yml
 if [ $? -ne 0 ]; then
   echo "Error creating htpasswd IDP user. Exiting..."
   exit 1
