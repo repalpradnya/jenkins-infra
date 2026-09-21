@@ -96,10 +96,10 @@ pipeline {
                         env.REDHAT_RELEASE  = "9.8"
                         env.GOLANG_TARBALL  = "https://golang.org/dl/go1.21.0.linux-ppc64le.tar.gz"
                     } else if (env.OCP_RELEASE == "4.15") {
-                        env.REDHAT_RELEASE  = "9.3"
+                        env.REDHAT_RELEASE  = "9.8"
                         env.GOLANG_TARBALL  = "https://golang.org/dl/go1.22.0.linux-ppc64le.tar.gz"
                     } else if (env.OCP_RELEASE == "4.16") {
-                        env.REDHAT_RELEASE  = "9.4"
+                        env.REDHAT_RELEASE  = "9.8"
                         env.GOLANG_TARBALL  = "https://golang.org/dl/go1.22.0.linux-ppc64le.tar.gz"
                     } else {
                         env.REDHAT_RELEASE  = "9.8"
