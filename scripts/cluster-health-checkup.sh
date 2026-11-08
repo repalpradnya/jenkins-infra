@@ -77,6 +77,48 @@ ssh -o StrictHostKeyChecking=no \
     "cat /root/e2e_tests_results/failed-e2e-results.txt" 2>/dev/null \
     || echo "failed-e2e-results.txt not found on bastion"
 
+section "Rerunning e2e output"
+# Build failed-e2e-results.txt from the "Blocking test failures" block of
+# openshift-cmd-out-log-0.txt (one quoted test name per line, no leading
+# whitespace), then rerun only those tests and print the output.
+ssh -o StrictHostKeyChecking=no \
+    -i ${WORKSPACE}/deploy/id_rsa \
+    root@${BASTION_IP} 'bash -s' <<'REMOTE_EOF' 2>&1 || echo "Rerun of failed e2e tests could not be completed on bastion"
+cd /tmp/openshift_ws/src/github.com/openshift/origin/ || exit 1
+
+awk '
+    /Blocking test failures:/ { in_block = 1; next }
+    in_block && /^[[:space:]]*\*/ {
+        sub(/^[[:space:]]*\*[[:space:]]*/, "")
+        sub(/[[:space:]]+$/, "")
+        print "\"" $0 "\""
+        next
+    }
+    in_block && !/^[[:space:]]*$/ { in_block = 0 }
+' /root/e2e_tests_results/openshift-cmd-out-log-0.txt > failed-e2e-results.txt
+
+if [ ! -s failed-e2e-results.txt ]; then
+    echo "No blocking test failures found in openshift-cmd-out-log-0.txt, nothing to rerun"
+    exit 0
+fi
+
+echo "Tests to rerun:"
+cat failed-e2e-results.txt
+echo ""
+
+export PATH=/usr/local/go/bin:$PATH
+export PATH=/usr/bin:$PATH
+export KUBECONFIG=/root/.kube/config
+export KUBE_TEST_REPO_LIST=/tmp/kube-test-repo-list
+
+oc adm cordon node/worker-0
+./openshift-tests run -f ./failed-e2e-results.txt -o output.txt
+
+echo ""
+echo "----- output.txt -----"
+cat output.txt
+REMOTE_EOF
+
 
 echo ""
 echo "$SEPARATOR"
