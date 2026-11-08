@@ -78,27 +78,32 @@ ssh -o StrictHostKeyChecking=no \
     || echo "failed-e2e-results.txt not found on bastion"
 
 section "Rerunning e2e output"
-# Build failed-e2e-results.txt from the "Blocking test failures" block of
-# openshift-cmd-out-log-0.txt (one quoted test name per line, no leading
-# whitespace), then rerun only those tests and print the output.
+# Build failed-e2e-results.txt from the "Blocking test failures:" or
+# "Failing tests:" blocks of openshift-cmd-out-log-0.txt (one quoted test name
+# per line, no leading whitespace, duplicates removed), then rerun only those
+# tests and print the output.
 ssh -o StrictHostKeyChecking=no \
     -i ${WORKSPACE}/deploy/id_rsa \
     root@${BASTION_IP} 'bash -s' <<'REMOTE_EOF' 2>&1 || echo "Rerun of failed e2e tests could not be completed on bastion"
 cd /tmp/openshift_ws/src/github.com/openshift/origin/ || exit 1
 
 awk '
-    /Blocking test failures:/ { in_block = 1; next }
-    in_block && /^[[:space:]]*\*/ {
-        sub(/^[[:space:]]*\*[[:space:]]*/, "")
-        sub(/[[:space:]]+$/, "")
-        print "\"" $0 "\""
+    /^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$/ { in_block = 1; found = 0; next }
+    in_block && /^[[:space:]]*$/ {
+        if (found) in_block = 0
         next
     }
-    in_block && !/^[[:space:]]*$/ { in_block = 0 }
+    in_block {
+        sub(/^[[:space:]]*\*[[:space:]]*/, "")
+        sub(/^[[:space:]]+/, "")
+        sub(/[[:space:]]+$/, "")
+        found = 1
+        if (!seen[$0]++) print "\"" $0 "\""
+    }
 ' /root/e2e_tests_results/openshift-cmd-out-log-0.txt > failed-e2e-results.txt
 
 if [ ! -s failed-e2e-results.txt ]; then
-    echo "No blocking test failures found in openshift-cmd-out-log-0.txt, nothing to rerun"
+    echo "No blocking/failing tests found in openshift-cmd-out-log-0.txt, nothing to rerun"
     exit 0
 fi
 
