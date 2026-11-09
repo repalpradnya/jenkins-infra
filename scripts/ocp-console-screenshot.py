@@ -325,7 +325,39 @@ def login(driver, console_url, password):
         raise Exception(f"Login failed: {e}")
 
 
-def screenshot_with_retry(driver, name, url, output_dir, retries=2):
+def scroll_to_section(driver, heading_text):
+    """
+    Scroll the page so the section whose heading text equals heading_text
+    is at the top. Falls back to scrolling the console's main scroll
+    container down by one viewport if the heading is not found.
+    """
+    found = driver.execute_script(
+        """
+        var res = document.evaluate(
+            "//*[normalize-space(text())='" + arguments[0] + "']",
+            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+        );
+        var el = res.singleNodeValue;
+        if (!el) { return false; }
+        el.scrollIntoView({block: 'start'});
+        return true;
+        """,
+        heading_text
+    )
+    if not found:
+        print(f"  Heading '{heading_text}' not found — scrolling one viewport")
+        driver.execute_script(
+            """
+            var c = document.getElementById('content-scrollable')
+                    || document.scrollingElement;
+            c.scrollTop += c.clientHeight;
+            """
+        )
+    time.sleep(5)
+
+
+def screenshot_with_retry(driver, name, url, output_dir, retries=2,
+                          scroll_to=None):
     for attempt in range(retries + 1):
         try:
             print(f"  Loading URL: {url}")
@@ -359,8 +391,14 @@ def screenshot_with_retry(driver, name, url, output_dir, retries=2):
 
             path = output_dir / f"{name}.png"
 
-            # Take full page screenshot using scrollHeight
-            full_page_screenshot(driver, path)
+            if scroll_to:
+                # Pause, scroll to the requested section and capture the
+                # current viewport (resizing the window would reset scroll)
+                scroll_to_section(driver, scroll_to)
+                driver.save_screenshot(str(path))
+            else:
+                # Take full page screenshot using scrollHeight
+                full_page_screenshot(driver, path)
 
             size = path.stat().st_size
             print(
@@ -383,33 +421,47 @@ def screenshot_with_retry(driver, name, url, output_dir, retries=2):
 
 
 def capture_pages(driver, console_url, output_dir):
+    cpu_url = (
+        f"{console_url}/monitoring/dashboards/dashboard-k8s-resources-cluster"
+    )
+    # (name, url, heading to scroll to before capturing or None)
+    # Files are saved with a numeric prefix so they sort in capture order.
     pages = [
         ("dashboard",
-         f"{console_url}/dashboards"),
+         f"{console_url}/dashboards",
+         None),
         ("alerts",
-         f"{console_url}/monitoring/alerts"),
+         f"{console_url}/monitoring/alerts?rowFilter-alert-source=platform",
+         None),
         ("apiserver",
-         f"{console_url}/monitoring/dashboards/grafana-dashboard-apiserver-performance"),
+         f"{console_url}/monitoring/dashboards/grafana-dashboard-apiserver-performance",
+         None),
         ("etcd",
-         f"{console_url}/monitoring/dashboards/etcd-dashboard"),
+         f"{console_url}/monitoring/dashboards/etcd-dashboard",
+         None),
         ("CPU",
-         f"{console_url}/monitoring/dashboards/dashboard-k8s-resources-cluster"),
-        ("Namespaces",
-         f"{console_url}/monitoring/dashboards/dashboard-k8s-resources-namespace?namespace=default"),
-        ("operators",
-         f"{console_url}/k8s/all-namespaces/operators.coreos.com~v1alpha1~ClusterServiceVersion"),
+         cpu_url,
+         None),
+        # Same page as CPU, scrolled down to the Memory section
+        ("memory",
+         cpu_url,
+         "CPU Quota"),
         ("prometheus",
-         f"{console_url}/monitoring/dashboards/dashboard-prometheus"),
+         f"{console_url}/monitoring/dashboards/dashboard-prometheus",
+         None),
         ("cluster-settings",
-         f"{console_url}/settings/cluster"),
+         f"{console_url}/settings/cluster",
+         None),
     ]
 
     success = 0
     failed = []
 
-    for name, url in pages:
-        print(f"\nCapturing {name}:")
-        if screenshot_with_retry(driver, name, url, output_dir):
+    for index, (name, url, scroll_to) in enumerate(pages, start=1):
+        file_name = f"{index:02d}-{name}"
+        print(f"\nCapturing {file_name}:")
+        if screenshot_with_retry(driver, file_name, url, output_dir,
+                                 scroll_to=scroll_to):
             success += 1
         else:
             print(f"  FAILED: {name}")
