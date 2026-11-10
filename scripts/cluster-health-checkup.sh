@@ -77,15 +77,56 @@ ssh -o StrictHostKeyChecking=no \
     "cat /root/e2e_tests_results/failed-e2e-results.txt" 2>/dev/null \
     || echo "failed-e2e-results.txt not found on bastion"
 
+
+section "Blocking test failures (latest openshift-cmd-out-log-N.txt)"
+# summary.txt and failed-e2e-results.txt can be empty, so read the result
+# straight from the e2e log. The log is named openshift-cmd-out-log-<N>.txt
+# (N = 0, 1, 2, 3, ...); use the highest N and print only the complete
+# "Blocking test failures:" / "Failing tests:" section.
+ssh -o StrictHostKeyChecking=no \
+    -i ${WORKSPACE}/deploy/id_rsa \
+    root@${BASTION_IP} 'bash -s' <<'REMOTE_EOF' 2>&1 || echo "Could not read openshift-cmd-out-log-N.txt on bastion"
+LOG=$(ls /root/e2e_tests_results/openshift-cmd-out-log-*.txt 2>/dev/null | sort -V | tail -n 1)
+if [ -z "$LOG" ]; then
+    echo "openshift-cmd-out-log-N.txt not found on bastion"
+    exit 0
+fi
+echo "Source: $LOG"
+echo ""
+
+OUT=$(awk '
+    /^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$/ { in_block = 1; found = 0; print; next }
+    in_block && /^[[:space:]]*$/ {
+        if (found) in_block = 0
+        next
+    }
+    in_block { found = 1; print }
+' "$LOG")
+
+if [ -n "$OUT" ]; then
+    echo "$OUT"
+else
+    echo "No blocking test failures or failed tests found in $(basename "$LOG")"
+fi
+REMOTE_EOF
+
 section "Rerunning e2e output"
 # Build failed-e2e-results.txt from the "Blocking test failures:" or
-# "Failing tests:" blocks of openshift-cmd-out-log-0.txt (one quoted test name
-# per line, no leading whitespace, duplicates removed), then rerun only those
-# tests and print the output.
+# "Failing tests:" section of the latest openshift-cmd-out-log-N.txt (one quoted
+# test name per line, no leading whitespace, duplicates removed), then rerun
+# only those tests. The full openshift-tests output is kept on the bastion
+# (rerun-console.txt / output.txt); only the "Blocking test failures:" /
+# "Failing tests:" section of the rerun is printed here.
 ssh -o StrictHostKeyChecking=no \
     -i ${WORKSPACE}/deploy/id_rsa \
     root@${BASTION_IP} 'bash -s' <<'REMOTE_EOF' 2>&1 || echo "Rerun of failed e2e tests could not be completed on bastion"
 cd /tmp/openshift_ws/src/github.com/openshift/origin/ || exit 1
+
+LOG=$(ls /root/e2e_tests_results/openshift-cmd-out-log-*.txt 2>/dev/null | sort -V | tail -n 1)
+if [ -z "$LOG" ]; then
+    echo "openshift-cmd-out-log-N.txt not found on bastion, nothing to rerun"
+    exit 0
+fi
 
 awk '
     /^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$/ { in_block = 1; found = 0; next }
@@ -100,14 +141,14 @@ awk '
         found = 1
         if (!seen[$0]++) print "\"" $0 "\""
     }
-' /root/e2e_tests_results/openshift-cmd-out-log-0.txt > failed-e2e-results.txt
+' "$LOG" > failed-e2e-results.txt
 
 if [ ! -s failed-e2e-results.txt ]; then
-    echo "No blocking/failing tests found in openshift-cmd-out-log-0.txt, nothing to rerun"
+    echo "No blocking/failing tests found in $(basename "$LOG"), nothing to rerun"
     exit 0
 fi
 
-echo "Tests to rerun:"
+echo "Tests to rerun (from $(basename "$LOG")):"
 cat failed-e2e-results.txt
 echo ""
 
@@ -116,12 +157,28 @@ export PATH=/usr/bin:$PATH
 export KUBECONFIG=/root/.kube/config
 export KUBE_TEST_REPO_LIST=/tmp/kube-test-repo-list
 
-oc adm cordon node/worker-0
-./openshift-tests run -f ./failed-e2e-results.txt -o output.txt
+oc adm cordon node/worker-0 >/dev/null
+./openshift-tests run -f ./failed-e2e-results.txt -o output.txt > rerun-console.txt 2>&1
 
-echo ""
-echo "----- output.txt -----"
-cat output.txt
+echo "Rerun result (Blocking test failures section only):"
+extract_blocking() {
+    awk '
+        /^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$/ { in_block = 1; found = 0; print; next }
+        in_block && /^[[:space:]]*$/ {
+            if (found) in_block = 0
+            next
+        }
+        in_block { found = 1; print }
+    ' "$1"
+}
+extract_blocking rerun-console.txt > rerun-failures.txt
+[ -s rerun-failures.txt ] || extract_blocking output.txt > rerun-failures.txt 2>/dev/null
+
+if [ -s rerun-failures.txt ]; then
+    cat rerun-failures.txt
+else
+    echo "No blocking test failures or failed tests in the rerun"
+fi
 REMOTE_EOF
 
 
