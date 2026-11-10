@@ -81,8 +81,9 @@ ssh -o StrictHostKeyChecking=no \
 section "Blocking test failures (latest openshift-cmd-out-log-N.txt)"
 # summary.txt and failed-e2e-results.txt can be empty, so read the result
 # straight from the e2e log. The log is named openshift-cmd-out-log-<N>.txt
-# (N = 0, 1, 2, 3, ...); use the highest N and print only the complete
-# "Blocking test failures:" / "Failing tests:" section.
+# (N = 0, 1, 2, 3, ...); use the highest N and print everything from the last
+# "Blocking test failures:" / "Failing tests:" header to the end of the file
+# (includes the "N blocking fail, N informing fail, N pass ..." last line).
 ssh -o StrictHostKeyChecking=no \
     -i ${WORKSPACE}/deploy/id_rsa \
     root@${BASTION_IP} 'bash -s' <<'REMOTE_EOF' 2>&1 || echo "Could not read openshift-cmd-out-log-N.txt on bastion"
@@ -94,17 +95,10 @@ fi
 echo "Source: $LOG"
 echo ""
 
-OUT=$(awk '
-    /^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$/ { in_block = 1; found = 0; print; next }
-    in_block && /^[[:space:]]*$/ {
-        if (found) in_block = 0
-        next
-    }
-    in_block { found = 1; print }
-' "$LOG")
+START=$(grep -nE '^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$' "$LOG" | tail -n 1 | cut -d: -f1)
 
-if [ -n "$OUT" ]; then
-    echo "$OUT"
+if [ -n "$START" ]; then
+    tail -n +"$START" "$LOG"
 else
     echo "No blocking test failures or failed tests found in $(basename "$LOG")"
 fi
@@ -115,8 +109,9 @@ section "Rerunning e2e output"
 # "Failing tests:" section of the latest openshift-cmd-out-log-N.txt (one quoted
 # test name per line, no leading whitespace, duplicates removed), then rerun
 # only those tests. The full openshift-tests output is kept on the bastion
-# (rerun-console.txt / output.txt); only the "Blocking test failures:" /
-# "Failing tests:" section of the rerun is printed here.
+# (rerun-console.txt / output.txt); only the part from the last
+# "Blocking test failures:" / "Failing tests:" header to the end of the rerun
+# output is printed here.
 ssh -o StrictHostKeyChecking=no \
     -i ${WORKSPACE}/deploy/id_rsa \
     root@${BASTION_IP} 'bash -s' <<'REMOTE_EOF' 2>&1 || echo "Rerun of failed e2e tests could not be completed on bastion"
@@ -160,24 +155,19 @@ export KUBE_TEST_REPO_LIST=/tmp/kube-test-repo-list
 oc adm cordon node/worker-0 >/dev/null
 ./openshift-tests run -f ./failed-e2e-results.txt -o output.txt > rerun-console.txt 2>&1
 
-echo "Rerun result (Blocking test failures section only):"
+echo "Rerun result (from Blocking test failures to end of output):"
 extract_blocking() {
-    awk '
-        /^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$/ { in_block = 1; found = 0; print; next }
-        in_block && /^[[:space:]]*$/ {
-            if (found) in_block = 0
-            next
-        }
-        in_block { found = 1; print }
-    ' "$1"
+    start=$(grep -nE '^[[:space:]]*(Blocking test failures|Failing tests):[[:space:]]*$' "$1" 2>/dev/null | tail -n 1 | cut -d: -f1)
+    [ -n "$start" ] && tail -n +"$start" "$1"
 }
 extract_blocking rerun-console.txt > rerun-failures.txt
-[ -s rerun-failures.txt ] || extract_blocking output.txt > rerun-failures.txt 2>/dev/null
+[ -s rerun-failures.txt ] || extract_blocking output.txt > rerun-failures.txt
 
 if [ -s rerun-failures.txt ]; then
     cat rerun-failures.txt
 else
-    echo "No blocking test failures or failed tests in the rerun"
+    echo "No blocking test failures or failed tests in the rerun. Last lines of output:"
+    tail -n 3 rerun-console.txt
 fi
 REMOTE_EOF
 
