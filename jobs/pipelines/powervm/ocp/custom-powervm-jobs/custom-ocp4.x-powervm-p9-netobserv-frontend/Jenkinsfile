@@ -15,6 +15,7 @@ pipeline {
         string(defaultValue: '0', description: 'Time (in minutes) to retain cluster after tests. 0 = destroy immediately', name: 'KeepFor')
         string(name: 'Suite', defaultValue: 'Network_Observability', description: 'Cypress suite to run (e.g. Network_Observability or path tests/dir/suite.cy.ts)')
         string(name: 'Retries', defaultValue: '2', description: 'Number of retries on test failure')
+        string(name: 'CatalogImage', defaultValue: 'quay.io/redhat-user-workloads/ocp-network-observab-tenant/catalog-zstream:latest', description: 'NetObserv operator catalog source image (e.g. catalog-zstream:latest or catalog-ystream:latest)')
     }
 
     environment {
@@ -56,8 +57,8 @@ pipeline {
         SUITE2RUN               = "${params.Suite}"
         RETRIES                 = "${params.Retries}"
         JTIMEOUT                = "180000"
-        // NetObserv catalog source image — passed to Cypress as NOO_CS_IMAGE
-        MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE = "quay.io/redhat-user-workloads/ocp-network-observab-tenant/catalog-ystream:latest"
+        // NetObserv catalog source image (job parameter) — passed to Cypress as NOO_CS_IMAGE
+        MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE = "${params.CatalogImage}"
     }
 
     stages {
