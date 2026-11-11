@@ -15,7 +15,6 @@ pipeline {
         string(defaultValue: '0', description: 'Time (in minutes) to retain cluster after tests. 0 = destroy immediately', name: 'KeepFor')
         string(name: 'CatalogImage', defaultValue: 'quay.io/redhat-user-workloads/ocp-network-observab-tenant/catalog-zstream:latest', description: 'NetObserv operator catalog image used by the backend suite')
         string(name: 'Focus', defaultValue: '', description: 'Optional ginkgo --focus string to run a specific test (empty = all)')
-        string(name: 'OperatorBranch', defaultValue: '', description: 'Optional netobserv-operator branch to test (empty = default branch)')
     }
 
     environment {
@@ -54,7 +53,6 @@ pipeline {
         // NETobserv backend test vars (consumed by scripts/netobserv/backend.sh)
         MULTISTAGE_PARAM_OVERRIDE_NETOBSERV_CS_IMAGE = "${params.CatalogImage}"
         GINKGO_FOCUS            = "${params.Focus}"
-        NETOBSERV_OPERATOR_BRANCH = "${params.OperatorBranch}"
     }
 
     stages {

@@ -16,7 +16,6 @@
 #   KUBECONFIG                                   kubeconfig of the cluster (default /host/kubeconfig)
 #   QE_KUBEADMIN_PASSWORD | OCADMPW              kubeadmin password (required by the suite)
 #   MULTISTAGE_PARAM_OVERRIDE_NETOBSERV_CS_IMAGE catalog image (default: catalog-zstream:latest)
-#   NETOBSERV_OPERATOR_BRANCH                    branch of netobserv-operator to test (default: repo default)
 #   GINKGO_FOCUS                                 optional --focus string for a specific test
 #   GINKGO_TIMEOUT                               ginkgo --timeout (default 8h)
 #   APPLY_ICSP                                   true|false (default true)
@@ -89,13 +88,7 @@ printInfo "Cloning netobserv-operator"
 if [ ! -d "$REPODIR/.git" ]; then
   git clone "$REPO_URL" "$REPODIR" || exit 4
 fi
-git -C "$REPODIR" fetch origin || exit 4
-if [ -n "${NETOBSERV_OPERATOR_BRANCH:-}" ]; then
-  git -C "$REPODIR" checkout "$NETOBSERV_OPERATOR_BRANCH" || exit 4
-  git -C "$REPODIR" pull --ff-only origin "$NETOBSERV_OPERATOR_BRANCH" || exit 4
-else
-  git -C "$REPODIR" pull --ff-only || exit 4
-fi
+git -C "$REPODIR" pull --ff-only || exit 4
 
 apply_mirror_config || exit 5
 

@@ -27,6 +27,6 @@ echo "${BASTION_IP} ${OCP_ROUTES}" | tee -a /etc/hosts
 echo "Step-3: Running NETobserv backend tests via backend.sh..."
 # Catalog image: comes from the pipeline env (MULTISTAGE_PARAM_OVERRIDE_NETOBSERV_CS_IMAGE);
 # backend.sh defaults to catalog-zstream:latest if unset.
-# Optional: GINKGO_FOCUS, NETOBSERV_OPERATOR_BRANCH.
+# Optional: GINKGO_FOCUS.
 # backend.sh always ends with `exit 0` so failures show in artifacts but the build stays GREEN.
 bash "${WORKSPACE}/scripts/netobserv/backend.sh" || true

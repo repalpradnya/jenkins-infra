@@ -17,7 +17,6 @@ pipeline {
         string(name: 'Suite', defaultValue: 'Network_Observability', description: 'Cypress suite to run (e.g. Network_Observability or path tests/dir/suite.cy.ts)')
         string(name: 'Retries', defaultValue: '2', description: 'Number of retries on test failure')
         string(name: 'Focus', defaultValue: '', description: 'Backend only: optional ginkgo --focus string to run a specific test (empty = all)')
-        string(name: 'OperatorBranch', defaultValue: '', description: 'Backend only: optional netobserv-operator branch to test (empty = default branch)')
         string(name: 'CatalogImage', defaultValue: 'quay.io/redhat-user-workloads/ocp-network-observab-tenant/catalog-zstream:latest', description: 'NetObserv operator catalog source image (e.g. catalog-zstream:latest or catalog-ystream:latest)')
     }
 
@@ -64,7 +63,6 @@ pipeline {
         MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE   = "${params.CatalogImage}"   // frontend (Cypress)
         MULTISTAGE_PARAM_OVERRIDE_NETOBSERV_CS_IMAGE     = "${params.CatalogImage}"   // backend (Ginkgo)
         GINKGO_FOCUS                                     = "${params.Focus}"
-        NETOBSERV_OPERATOR_BRANCH                        = "${params.OperatorBranch}"
     }
 
     stages {
