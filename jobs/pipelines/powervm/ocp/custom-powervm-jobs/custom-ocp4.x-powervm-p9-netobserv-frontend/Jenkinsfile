@@ -75,12 +75,6 @@ pipeline {
             }
         }
 
-        stage('Clone ansible extras') {
-            steps {
-                cloneRepo("https://github.com/ocp-power-automation/ocp4-playbooks-extras", "ocp4-playbooks-extras", "*/main")
-            }
-        }
-
         stage('Setup Common Environment Variables') {
             steps {
                 setupCommonEnvironmentVariables()
